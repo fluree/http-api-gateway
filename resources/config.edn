@@ -1,0 +1,11 @@
+{:http/server       {:port #profile {:dev  58090
+                                     :prod 8090}}
+ :fluree/connection {:method       #profile {:dev  :file
+                                             :test :memory
+                                             :prod :ipfs}
+                     :parallelism  #or [#env FDB_CONN_PARALLELISM
+                                        #profile {:dev  1
+                                                  :test 1
+                                                  :prod 4}]
+                     :storage-path #or [#env FDB_STORAGE_PATH
+                                        #profile {:dev "data"}]}}
