@@ -20,6 +20,8 @@
 (s/def ::t neg-int?)
 (s/def ::alias ::non-empty-string)
 (s/def ::action #{:new :insert})
+(s/def ::ledger ::non-empty-string)
+(s/def ::txn map?)
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
