@@ -25,7 +25,9 @@
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
-                  (http/run-server handler options))
+                  (http/run-server handler options)
+                  (println "Fluree HTTP API server running on port"
+                           (:port options)))
         :stop   (fn [{::ds/keys [instance]}]
                   (http/server-stop! instance))
         :config {:handler (ds/local-ref [:handler])
