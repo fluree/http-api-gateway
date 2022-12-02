@@ -1,7 +1,7 @@
 (ns fluree.http-api.components.http
   (:require
     [donut.system :as ds]
-    [org.httpkit.server :as http]
+    [ring.adapter.jetty9 :as http]
     [reitit.ring :as ring]
     [reitit.coercion.spec]
     [reitit.swagger :as swagger]
@@ -25,15 +25,16 @@
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
-                  (http/run-server handler options)
-                  (println "Fluree HTTP API server running on port"
-                           (:port options)))
+                  (let [server (http/run-jetty handler options)]
+                    (println "Fluree HTTP API server running on port"
+                             (:port options))
+                    server))
         :stop   (fn [{::ds/keys [instance]}]
-                  (http/server-stop! instance))
+                  (http/stop-server instance))
         :config {:handler (ds/local-ref [:handler])
                  :options
-                 {:port                 (ds/ref [:env :http/server :port])
-                  :legacy-return-value? false}}})
+                 {:port  (ds/ref [:env :http/server :port])
+                  :join? false}}})
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
