@@ -21,7 +21,7 @@
 (s/def ::alias ::non-empty-string)
 (s/def ::action #{:new :insert})
 (s/def ::ledger ::non-empty-string)
-(s/def ::txn map?)
+(s/def ::txn (s/coll-of map?))
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
