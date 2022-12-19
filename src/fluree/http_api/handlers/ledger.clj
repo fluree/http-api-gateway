@@ -24,7 +24,7 @@
                           (do
                             (log/debug "transact - Ledger" ledger "exists; loading it")
                             [(deref! (fluree/load conn ledger)) 200])
-                          (if (= :new action)
+                          (if (= :new (keyword action))
                             (do
                               (log/debug "transact - Ledger" ledger "does not exist; creating it")
                               [(create {:conn conn, :name ledger}) 201])
@@ -34,7 +34,9 @@
         db      (-> ledger
                     fluree/db
                     (fluree/stage txn)
-                    fluree/commit!)]
+                    deref!
+                    fluree/commit!
+                    deref!)]
     {:status status
      :body   (-> db
                  (select-keys [:alias :t])
