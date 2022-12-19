@@ -1,8 +1,8 @@
 (ns fluree.http-api.handlers.ledger
   (:require
-    [fluree.db.conn.proto :as conn-proto]
-    [fluree.db.json-ld.api :as fdb]
-    [fluree.db.util.core :as util]))
+    [fluree.db.json-ld.api :as fluree]
+    [fluree.db.util.core :as util]
+    [fluree.db.util.log :as log]))
 
 (defn deref!
   "Derefs promise p and throws if the result is an exception, returns it otherwise."
@@ -14,33 +14,35 @@
 
 (defn create
   [{:keys [conn name]}]
-  (println "Creating ledger" name)
-  (deref! (fdb/create conn name)))
+  (log/info "Creating ledger" name)
+  (deref! (fluree/create conn name)))
 
 (defn transact
   [{:keys [fluree/conn] {{:keys [action ledger txn]} :body} :parameters}]
-  (println "Transacting to" ledger ":" (pr-str txn))
-  ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
-  (let [[ledger status]  (if-let [res (deref! (fdb/load-if-exists conn ledger))]
-                           [res 200]
-                           (if (= :new action)
-                             (do
-                               (println "Creating new ledger:" ledger)
-                               [(create {:conn conn, :name ledger}) 201])
-                             (throw (ex-info "Ledger does not exist" {:ledger ledger}))))
+  (println "\n\nTransacting to" ledger ":" (pr-str txn))
+  (let [[ledger status] (if (deref! (fluree/exists? conn ledger))
+                          (do
+                            (log/debug "transact - Ledger" ledger "exists; loading it")
+                            [(deref! (fluree/load conn ledger)) 200])
+                          (if (= :new action)
+                            (do
+                              (log/debug "transact - Ledger" ledger "does not exist; creating it")
+                              [(create {:conn conn, :name ledger}) 201])
+                            (throw (ex-info "Ledger does not exist" {:ledger ledger}))))
         address (:address ledger)
-        db      (fdb/db ledger)
-        db'     (deref! (fdb/stage db txn))
-        db''    (deref! (fdb/commit! db'))]
+        ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
+        db      (-> ledger
+                    fluree/db
+                    (fluree/stage txn)
+                    fluree/commit!)]
     {:status status
-     :body   (-> db''
+     :body   (-> db
                  (select-keys [:alias :t])
                  (assoc :address address))}))
 
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
-  (println "Querying" ledger ":" (pr-str query))
-  (let [ledger (deref! (fdb/load conn ledger))
-        db     (fdb/db ledger)]
+  (let [db (->> ledger (fluree/load conn) deref! fluree/db)]
+    (log/debug "query - Querying ledger" ledger "-" query)
     {:status 200
-     :body   (deref! (fdb/query db query))}))
+     :body   (deref! (fluree/query db query))}))

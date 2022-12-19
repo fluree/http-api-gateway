@@ -27,7 +27,9 @@
 
 (defmethod ds/named-system :dev
   [_]
-  (ds/system :base {[:env] (env-config :dev)}))
+  (let [ec (env-config :dev)]
+    (println "dev config:" (pr-str ec))
+    (ds/system :base {[:env] ec})))
 
 (defmethod ds/named-system ::ds/repl
   [_]
@@ -40,7 +42,7 @@
 (defn -main
   [& args]
   (let [profile (or (-> args first keyword) :prod)]
-    (donut.system/start profile)))
+    (ds/start profile)))
 
 
 (comment ; REPL utils

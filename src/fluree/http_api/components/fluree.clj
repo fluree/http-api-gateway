@@ -9,7 +9,4 @@
         :stop   (fn [{::ds/keys [instance]}]
                   ;; TODO: Add a close-connection fn to f.d.json-ld.api
                   (when instance (conn-proto/-close instance)))
-        :config {:options
-                 {:method      (ds/ref [:env :fluree/connection :method])
-                  :parallelism (ds/ref [:env :fluree/connection :parallelism])
-                  :storage-path (ds/ref [:env :fluree/connection :storage-path])}}})
+        :config {:options (ds/ref [:env :fluree/connection])}})
