@@ -8,6 +8,6 @@
          org.slf4j/slf4j-api            {:mvn/version "2.0.5"}
          metosin/reitit                 {:mvn/version "0.5.18"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
-         com.fluree/db                  {:local/root "../db"}
-         #_{:git/url "https://github.com/fluree/db.git"
-            :git/sha "e9f6d47134fe6561187c51eeccd07d6932f57e90"}}}
+         metosin/spec-tools             {:mvn/version "0.10.5"}
+         com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
+                                         :sha     "e55f38fe013743a79bb8c422dd082dd55ac4a440"}}}
