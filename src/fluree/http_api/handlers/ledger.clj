@@ -44,7 +44,8 @@
 
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
-  (let [db (->> ledger (fluree/load conn) deref! fluree/db)]
-    (log/debug "query - Querying ledger" ledger "-" query)
+  (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
+        query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+    (log/debug "query - Querying ledger" ledger "-" query*)
     {:status 200
-     :body   (deref! (fluree/query db query))}))
+     :body   (deref! (fluree/query db query*))}))
