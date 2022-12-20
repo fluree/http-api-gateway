@@ -39,6 +39,10 @@
   [_]
   (ds/system :base {[:env] (env-config :prod)}))
 
+(defmethod ds/named-system :docker
+  [_]
+  (ds/system :prod {[:env] (env-config :docker)}))
+
 (defn -main
   [& args]
   (let [profile (or (-> args first keyword) :prod)]
