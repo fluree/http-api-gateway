@@ -9,5 +9,6 @@
          metosin/reitit                 {:mvn/version "0.5.18"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
          metosin/spec-tools             {:mvn/version "0.10.5"}
+         ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
                                          :sha     "e55f38fe013743a79bb8c422dd082dd55ac4a440"}}}

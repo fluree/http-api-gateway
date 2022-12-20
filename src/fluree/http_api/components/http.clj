@@ -15,6 +15,7 @@
     [muuntaja.core :as m]
     [muuntaja.format.json :as json-format]
     [muuntaja.format.core :as mf]
+    [ring.middleware.cors :refer [wrap-cors]]
     [fluree.db.util.log :as log])
   (:import (java.io InputStream InputStreamReader)))
 
@@ -89,7 +90,10 @@
         {:get {:no-doc  true
                :swagger {:info {:title "Fluree HTTP API"}}
                :handler (swagger/create-swagger-handler)}}]
-       ["/fdb" {:middleware [(partial wrap-assoc-conn conn)]}
+       ["/fdb" {:middleware [#(wrap-cors %
+                                         :access-control-allow-origin [#".*"]
+                                         :access-control-allow-methods [:get :post])
+                             (partial wrap-assoc-conn conn)]}
         ["/transact"
          {:post {:summary    "Endpoint for submitting transactions"
                  :parameters {:body (s/keys :opt-un [::action]
