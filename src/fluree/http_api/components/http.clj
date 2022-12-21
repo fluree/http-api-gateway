@@ -82,6 +82,32 @@
      :encoder [json-format/encoder]
      :decoder [fluree-json-ld-decoder]}))
 
+(defn websocket-handler
+  [upgrade-request]
+  ;; Mostly copy-pasta from
+  ;; https://github.com/sunng87/ring-jetty9-adapter/blob/master/examples/rj9a/websocket.clj
+  (let [provided-subprotocols (:websocket-subprotocols upgrade-request)
+        provided-extensions (:websocket-extensions upgrade-request)]
+    {;; provide websocket callbacks
+     :on-connect (fn on-connect [_]
+                   (tap> [:ws :connect]))
+     :on-text (fn on-text [ws text-message]
+                (tap> [:ws :msg text-message])
+                (http/send! ws (str "echo: " text-message)))
+     :on-bytes (fn on-bytes [_ _ _ _]
+                 (tap> [:ws :bytes]))
+     :on-close (fn on-close [_ status-code reason]
+                 (tap> [:ws :close status-code reason]))
+     :on-ping (fn on-ping [ws payload]
+                (tap> [:ws :ping])
+                (http/send! ws payload))
+     :on-pong (fn on-pong [_ _]
+                (tap> [:ws :pong]))
+     :on-error (fn on-error [_ e]
+                 (tap> [:ws :error e]))
+     :subprotocol (first provided-subprotocols)
+     :extensions provided-extensions}))
+
 (defn app
   [conn]
   (ring/ring-handler
@@ -124,6 +150,13 @@
                            coercion/coerce-request-middleware]}})
 
     (ring/routes
+      (ring/ring-handler
+        (ring/router
+          ["/ws" {:get (fn [req]
+                         (if (http/ws-upgrade-request? req)
+                           (http/ws-upgrade-response websocket-handler)
+                           {:status 400
+                            :body "Invalid websocket upgrade request"}))}]))
       (swagger-ui/create-swagger-ui-handler
         {:path   "/"
          :config {:validatorUrl     nil
