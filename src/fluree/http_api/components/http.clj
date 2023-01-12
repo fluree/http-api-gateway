@@ -19,6 +19,8 @@
     [fluree.db.util.log :as log])
   (:import (java.io InputStream InputStreamReader)))
 
+(set! *warn-on-reflection* true)
+
 ;; TODO: Flesh this out some more
 (s/def ::non-empty-string (s/and string? #(< 0 (count %))))
 (s/def ::address ::non-empty-string)
@@ -67,6 +69,9 @@
     (reify
       mf/Decode
       (decode [_ data charset]
+        ;; TODO: Surely there's a way to use the existing upstream decoder w/o
+        ;;       reflection? I couldn't figure it out so the code is copy-pasted
+        ;;       in the next five lines below.
         (let [decoded (if (.equals "utf-8" ^String charset)
                         (j/read-value data mapper)
                         (j/read-value (InputStreamReader. ^InputStream data

@@ -3,7 +3,8 @@
             [aero.core :as aero]
             [clojure.java.io :as io]
             [fluree.http-api.components.http :as http]
-            [fluree.http-api.components.fluree :as fluree])
+            [fluree.http-api.components.fluree :as fluree]
+            [fluree.db.util.log :as log])
   (:gen-class))
 
 (defn env-config [& [profile]]
@@ -28,7 +29,7 @@
 (defmethod ds/named-system :dev
   [_]
   (let [ec (env-config :dev)]
-    (println "dev config:" (pr-str ec))
+    (log/info "dev config:" (pr-str ec))
     (ds/system :base {[:env] ec})))
 
 (defmethod ds/named-system ::ds/repl
@@ -42,6 +43,17 @@
 (defmethod ds/named-system :docker
   [_]
   (ds/system :prod {[:env] (env-config :docker)}))
+
+(defn run-server
+  "Runs an HTTP API server in a thread, with :profile from opts or :dev by
+  default. Any other keys in opts override config from the profile.
+  Returns a zero-arity fn to shut down the server."
+  [{:keys [profile] :or {profile :dev} :as opts}]
+  (let [cfg-overrides (dissoc opts :profile)
+        ec (env-config profile)]
+    (log/debug "run-server cfg-overrides:" (pr-str cfg-overrides))
+    (let [system (ds/start profile {[:env] (merge ec cfg-overrides)})]
+      #(ds/stop system))))
 
 (defn -main
   [& args]
