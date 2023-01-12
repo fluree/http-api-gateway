@@ -29,6 +29,7 @@
                       :strings #{"new" "insert"}))
 (s/def ::ledger ::non-empty-string)
 (s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
+(s/def ::defaultContext map?)
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -122,7 +123,7 @@
                              (partial wrap-assoc-conn conn)]}
         ["/transact"
          {:post {:summary    "Endpoint for submitting transactions"
-                 :parameters {:body (s/keys :opt-un [::action]
+                 :parameters {:body (s/keys :opt-un [::action ::defaultContext]
                                             :req-un [::ledger ::txn])}
                  :responses  {200 {:body (s/keys :opt-un [::address ::id]
                                                  :req-un [::alias ::t])}

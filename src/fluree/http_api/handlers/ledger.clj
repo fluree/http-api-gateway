@@ -34,7 +34,7 @@
         ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
         db      (-> ledger
                     fluree/db
-                    (fluree/stage txn)
+                    (fluree/stage txn {:js? true})
                     deref!
                     fluree/commit!
                     deref!)]
