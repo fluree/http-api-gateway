@@ -2,7 +2,7 @@
                                      :prod   8090
                                      :docker 8090}}
  :fluree/connection {:method       #or [#env FLUREE_STORAGE_METHOD
-                                        #profile {:dev    :file
+                                        #profile {:dev    :memory
                                                   :test   :memory
                                                   :prod   :ipfs
                                                   :docker :file}]
