@@ -13,12 +13,13 @@
       res)))
 
 (defn create
-  [{:keys [conn name]}]
+  [{:keys [conn name default-context]}]
   (log/info "Creating ledger" name)
-  (deref! (fluree/create conn name)))
+  (log/debug "New ledger default context:" default-context)
+  (deref! (fluree/create conn name {:context default-context})))
 
 (defn transact
-  [{:keys [fluree/conn] {{:keys [action ledger txn]} :body} :parameters}]
+  [{:keys [fluree/conn] {{:keys [action ledger txn defaultContext]} :body} :parameters}]
   (println "\n\nTransacting to" ledger ":" (pr-str txn))
   (let [[ledger status] (if (deref! (fluree/exists? conn ledger))
                           (do
@@ -27,7 +28,7 @@
                           (if (= :new (keyword action))
                             (do
                               (log/debug "transact - Ledger" ledger "does not exist; creating it")
-                              [(create {:conn conn, :name ledger}) 201])
+                              [(create {:conn conn, :name ledger :default-context (or defaultContext (get txn "@context"))}) 201])
                             (throw (ex-info "Ledger does not exist" {:ledger ledger}))))
         address (:address ledger)
         ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
