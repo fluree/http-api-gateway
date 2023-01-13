@@ -13,14 +13,21 @@
 
 (def base-system
   {::ds/defs
-   {:env {}
+   {:env
+    {:http {}}
     :fluree
     {:conn fluree/conn}
     :http
     {:server  http/server
-     :handler #::ds{:start (fn [{{:keys [:fluree/connection]} ::ds/config}]
-                            (http/app connection))
-                    :config {:fluree/connection (ds/ref [:fluree :conn])}}}}})
+     :handler #::ds{:start  (fn [{{:keys [:fluree/connection] :as cfg
+                                   {:keys [routes middleware]} :http}
+                                  ::ds/config}]
+                              (log/debug "ds/config:" cfg)
+                              (http/app {:fluree/conn     connection
+                                         :http/routes     routes
+                                         :http/middleware middleware}))
+                    :config {:http              (ds/ref [:env :http])
+                             :fluree/connection (ds/ref [:fluree :conn])}}}}})
 
 (defmethod ds/named-system :base
   [_]
@@ -50,9 +57,11 @@
   Returns a zero-arity fn to shut down the server."
   [{:keys [profile] :or {profile :dev} :as opts}]
   (let [cfg-overrides (dissoc opts :profile)
-        ec (env-config profile)]
+        ec            (env-config profile)
+        merged-cfg    {[:env] (merge ec cfg-overrides)}]
     (log/debug "run-server cfg-overrides:" (pr-str cfg-overrides))
-    (let [system (ds/start profile {[:env] (merge ec cfg-overrides)})]
+    (log/debug "run-server merged config:" (pr-str merged-cfg))
+    (let [system (ds/start profile merged-cfg)]
       #(ds/stop system))))
 
 (defn -main
