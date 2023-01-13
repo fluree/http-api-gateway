@@ -68,6 +68,13 @@
                  :access-control-allow-origin [#".*"]
                  :access-control-allow-methods [:get :post]))
 
+(defn wrap-set-fuel-header
+  [handler]
+  (fn [req]
+    (let [resp (handler req)
+          fuel 1000] ; TODO: get this for real
+      (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
+
 (defn sort-middleware-by-weight
   [weighted-middleware]
   (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
@@ -129,7 +136,8 @@
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [default-fdb-middleware [[10 wrap-cors]
-                                [10 (partial wrap-assoc-conn conn)]]
+                                [10 (partial wrap-assoc-conn conn)]
+                                [100 wrap-set-fuel-header]]
         fdb-middleware (sort-middleware-by-weight
                          (concat default-fdb-middleware middleware))]
     (ring/ring-handler
