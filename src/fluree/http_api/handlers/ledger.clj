@@ -31,7 +31,6 @@
                               [(create {:conn conn, :name ledger :default-context (or defaultContext (get txn "@context"))}) 201])
                             (throw (ex-info "Ledger does not exist" {:ledger ledger}))))
         address (:address ledger)
-        _ (log/debug "Ledger:" ledger)
         ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
         db      (-> ledger
                     fluree/db
