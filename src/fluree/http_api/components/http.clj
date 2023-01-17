@@ -102,6 +102,7 @@
 (def fluree-json-ld-format
   (mf/map->Format
     {:name    "application/json"
+     :matches #"^application/(.+\+)?json$"
      :encoder [json-format/encoder]
      :decoder [fluree-json-ld-decoder]}))
 
