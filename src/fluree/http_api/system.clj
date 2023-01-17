@@ -58,7 +58,7 @@
   [{:keys [profile] :or {profile :dev} :as opts}]
   (let [cfg-overrides (dissoc opts :profile)
         ec            (env-config profile)
-        merged-cfg    {[:env] (merge ec cfg-overrides)}]
+        merged-cfg    {[:env] (merge-with merge ec cfg-overrides)}]
     (log/debug "run-server cfg-overrides:" (pr-str cfg-overrides))
     (log/debug "run-server merged config:" (pr-str merged-cfg))
     (let [system (ds/start profile merged-cfg)]
