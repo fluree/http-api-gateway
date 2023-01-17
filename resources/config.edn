@@ -16,5 +16,5 @@
                                         #profile {:dev    "data"
                                                   :docker "data"}]
                      ;; TODO: What should the default context really be?
-                     :defaults {:context {:id "@id", :type "@type",
-                                          :ex "http://example.com/"}}}}
+                     :defaults     {:context {:id "@id", :type "@type",
+                                              :ex "http://example.com/"}}}}

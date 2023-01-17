@@ -179,11 +179,11 @@
         (ring/ring-handler
           (ring/router
             (concat
-              [["/ws" {:get(fn [req]
-                             (if (http/ws-upgrade-request? req)
-                               (http/ws-upgrade-response websocket-handler)
-                               {:status 400
-                                :body   "Invalid websocket upgrade request"}))}]
+              [["/ws" {:get (fn [req]
+                              (if (http/ws-upgrade-request? req)
+                                (http/ws-upgrade-response websocket-handler)
+                                {:status 400
+                                 :body   "Invalid websocket upgrade request"}))}]
                routes])))
         (swagger-ui/create-swagger-ui-handler
           {:path   "/"
