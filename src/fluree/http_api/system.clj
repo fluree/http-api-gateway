@@ -14,7 +14,7 @@
 (def base-system
   {::ds/defs
    {:env
-    {:http {}}
+    {:http/server {}}
     :fluree
     {:conn fluree/conn}
     :http
@@ -26,7 +26,7 @@
                               (http/app {:fluree/conn     connection
                                          :http/routes     routes
                                          :http/middleware middleware}))
-                    :config {:http              (ds/ref [:env :http])
+                    :config {:http              (ds/ref [:env :http/server])
                              :fluree/connection (ds/ref [:fluree :conn])}}}}})
 
 (defmethod ds/named-system :base
