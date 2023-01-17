@@ -3,7 +3,8 @@
             [aero.core :as aero]
             [clojure.java.io :as io]
             [fluree.http-api.components.http :as http]
-            [fluree.http-api.components.fluree :as fluree])
+            [fluree.http-api.components.fluree :as fluree]
+            [fluree.db.util.log :as log])
   (:gen-class))
 
 (defn env-config [& [profile]]
@@ -12,14 +13,21 @@
 
 (def base-system
   {::ds/defs
-   {:env {}
+   {:env
+    {:http {}}
     :fluree
     {:conn fluree/conn}
     :http
     {:server  http/server
-     :handler #::ds{:start (fn [{{:keys [:fluree/connection]} ::ds/config}]
-                            (http/app connection))
-                    :config {:fluree/connection (ds/ref [:fluree :conn])}}}}})
+     :handler #::ds{:start  (fn [{{:keys [:fluree/connection] :as cfg
+                                   {:keys [routes middleware]} :http}
+                                  ::ds/config}]
+                              (log/debug "ds/config:" cfg)
+                              (http/app {:fluree/conn     connection
+                                         :http/routes     routes
+                                         :http/middleware middleware}))
+                    :config {:http              (ds/ref [:env :http])
+                             :fluree/connection (ds/ref [:fluree :conn])}}}}})
 
 (defmethod ds/named-system :base
   [_]
@@ -28,7 +36,7 @@
 (defmethod ds/named-system :dev
   [_]
   (let [ec (env-config :dev)]
-    (println "dev config:" (pr-str ec))
+    (log/info "dev config:" (pr-str ec))
     (ds/system :base {[:env] ec})))
 
 (defmethod ds/named-system ::ds/repl
@@ -42,6 +50,19 @@
 (defmethod ds/named-system :docker
   [_]
   (ds/system :prod {[:env] (env-config :docker)}))
+
+(defn run-server
+  "Runs an HTTP API server in a thread, with :profile from opts or :dev by
+  default. Any other keys in opts override config from the profile.
+  Returns a zero-arity fn to shut down the server."
+  [{:keys [profile] :or {profile :dev} :as opts}]
+  (let [cfg-overrides (dissoc opts :profile)
+        ec            (env-config profile)
+        merged-cfg    {[:env] (merge ec cfg-overrides)}]
+    (log/debug "run-server cfg-overrides:" (pr-str cfg-overrides))
+    (log/debug "run-server merged config:" (pr-str merged-cfg))
+    (let [system (ds/start profile merged-cfg)]
+      #(ds/stop system))))
 
 (defn -main
   [& args]

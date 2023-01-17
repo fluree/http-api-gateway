@@ -15,9 +15,11 @@
     [muuntaja.core :as m]
     [muuntaja.format.json :as json-format]
     [muuntaja.format.core :as mf]
-    [ring.middleware.cors :refer [wrap-cors]]
+    [ring.middleware.cors :as rmc]
     [fluree.db.util.log :as log])
   (:import (java.io InputStream InputStreamReader)))
+
+(set! *warn-on-reflection* true)
 
 ;; TODO: Flesh this out some more
 (s/def ::non-empty-string (s/and string? #(< 0 (count %))))
@@ -60,6 +62,16 @@
         (assoc :fluree/conn conn)
         handler)))
 
+(defn wrap-cors
+  [handler]
+  (rmc/wrap-cors handler
+                 :access-control-allow-origin [#".*"]
+                 :access-control-allow-methods [:get :post]))
+
+(defn sort-middleware-by-weight
+  [weighted-middleware]
+  (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
+
 (defn fluree-json-ld-decoder
   [options]
   (let [mapper (json-format/object-mapper! (assoc options
@@ -67,6 +79,9 @@
     (reify
       mf/Decode
       (decode [_ data charset]
+        ;; TODO: Surely there's a way to use the existing upstream decoder w/o
+        ;;       reflection? I couldn't figure it out so the code is copy-pasted
+        ;;       in the next five lines below.
         (let [decoded (if (.equals "utf-8" ^String charset)
                         (j/read-value data mapper)
                         (j/read-value (InputStreamReader. ^InputStream data
@@ -79,7 +94,7 @@
 
 (def fluree-json-ld-format
   (mf/map->Format
-    {:name "application/json"
+    {:name    "application/json"
      :encoder [json-format/encoder]
      :decoder [fluree-json-ld-decoder]}))
 
@@ -88,78 +103,82 @@
   ;; Mostly copy-pasta from
   ;; https://github.com/sunng87/ring-jetty9-adapter/blob/master/examples/rj9a/websocket.clj
   (let [provided-subprotocols (:websocket-subprotocols upgrade-request)
-        provided-extensions (:websocket-extensions upgrade-request)]
+        provided-extensions   (:websocket-extensions upgrade-request)]
     {;; provide websocket callbacks
-     :on-connect (fn on-connect [_]
-                   (tap> [:ws :connect]))
-     :on-text (fn on-text [ws text-message]
-                (tap> [:ws :msg text-message])
-                (http/send! ws (str "echo: " text-message)))
-     :on-bytes (fn on-bytes [_ _ _ _]
-                 (tap> [:ws :bytes]))
-     :on-close (fn on-close [_ status-code reason]
-                 (tap> [:ws :close status-code reason]))
-     :on-ping (fn on-ping [ws payload]
-                (tap> [:ws :ping])
-                (http/send! ws payload))
-     :on-pong (fn on-pong [_ _]
-                (tap> [:ws :pong]))
-     :on-error (fn on-error [_ e]
-                 (tap> [:ws :error e]))
+     :on-connect  (fn on-connect [_]
+                    (tap> [:ws :connect]))
+     :on-text     (fn on-text [ws text-message]
+                    (tap> [:ws :msg text-message])
+                    (http/send! ws (str "echo: " text-message)))
+     :on-bytes    (fn on-bytes [_ _ _ _]
+                    (tap> [:ws :bytes]))
+     :on-close    (fn on-close [_ status-code reason]
+                    (tap> [:ws :close status-code reason]))
+     :on-ping     (fn on-ping [ws payload]
+                    (tap> [:ws :ping])
+                    (http/send! ws payload))
+     :on-pong     (fn on-pong [_ _]
+                    (tap> [:ws :pong]))
+     :on-error    (fn on-error [_ e]
+                    (tap> [:ws :error e]))
      :subprotocol (first provided-subprotocols)
-     :extensions provided-extensions}))
+     :extensions  provided-extensions}))
 
 (defn app
-  [conn]
-  (ring/ring-handler
-    (ring/router
-      [["/swagger.json"
-        {:get {:no-doc  true
-               :swagger {:info {:title "Fluree HTTP API"}}
-               :handler (swagger/create-swagger-handler)}}]
-       ["/fdb" {:middleware [#(wrap-cors %
-                                         :access-control-allow-origin [#".*"]
-                                         :access-control-allow-methods [:get :post])
-                             (partial wrap-assoc-conn conn)]}
-        ["/transact"
-         {:post {:summary    "Endpoint for submitting transactions"
-                 :parameters {:body (s/keys :opt-un [::action ::defaultContext]
-                                            :req-un [::ledger ::txn])}
-                 :responses  {200 {:body (s/keys :opt-un [::address ::id]
-                                                 :req-un [::alias ::t])}
-                              400 {:body string?}
-                              500 {:body string?}}
-                 :handler    ledger/transact}}]
-        ["/query"
-         {:get  query-endpoint
-          :post query-endpoint}]]]
-      {:data {:coercion   reitit.coercion.spec/coercion
-              :muuntaja   (m/create
-                            (assoc-in
-                              m/default-options
-                              [:formats "application/json"]
-                              fluree-json-ld-format))
-              :middleware [swagger/swagger-feature
-                           muuntaja/format-negotiate-middleware
-                           muuntaja/format-response-middleware
-                           (exception/create-exception-middleware
-                             {::exception/default
-                              (partial exception/wrap-log-to-console
-                                       exception/default-handler)})
-                           muuntaja/format-request-middleware
-                           coercion/coerce-response-middleware
-                           coercion/coerce-request-middleware]}})
-
-    (ring/routes
-      (ring/ring-handler
-        (ring/router
-          ["/ws" {:get (fn [req]
-                         (if (http/ws-upgrade-request? req)
-                           (http/ws-upgrade-response websocket-handler)
-                           {:status 400
-                            :body "Invalid websocket upgrade request"}))}]))
-      (swagger-ui/create-swagger-ui-handler
-        {:path   "/"
-         :config {:validatorUrl     nil
-                  :operationsSorter "alpha"}})
-      (ring/create-default-handler))))
+  [{:keys [:fluree/conn :http/middleware :http/routes]}]
+  (log/debug "HTTP server running with Fluree connection:" conn
+             "- middleware:" middleware "- routes:" routes)
+  (let [default-fdb-middleware [[10 wrap-cors]
+                                [10 (partial wrap-assoc-conn conn)]]
+        fdb-middleware (sort-middleware-by-weight
+                         (concat default-fdb-middleware middleware))]
+    (ring/ring-handler
+      (ring/router
+        [["/swagger.json"
+          {:get {:no-doc  true
+                 :swagger {:info {:title "Fluree HTTP API"}}
+                 :handler (swagger/create-swagger-handler)}}]
+         ["/fdb" {:middleware fdb-middleware}
+          ["/transact"
+           {:post {:summary    "Endpoint for submitting transactions"
+                   :parameters {:body (s/keys :opt-un [::action ::defaultContext]
+                                              :req-un [::ledger ::txn])}
+                   :responses  {200 {:body (s/keys :opt-un [::address ::id]
+                                                   :req-un [::alias ::t])}
+                                400 {:body string?}
+                                500 {:body string?}}
+                   :handler    ledger/transact}}]
+          ["/query"
+           {:get  query-endpoint
+            :post query-endpoint}]]]
+        {:data {:coercion   reitit.coercion.spec/coercion
+                :muuntaja   (m/create
+                              (assoc-in
+                                m/default-options
+                                [:formats "application/json"]
+                                fluree-json-ld-format))
+                :middleware [swagger/swagger-feature
+                             muuntaja/format-negotiate-middleware
+                             muuntaja/format-response-middleware
+                             (exception/create-exception-middleware
+                               {::exception/default
+                                (partial exception/wrap-log-to-console
+                                         exception/default-handler)})
+                             muuntaja/format-request-middleware
+                             coercion/coerce-response-middleware
+                             coercion/coerce-request-middleware]}})
+      (ring/routes
+        (ring/ring-handler
+          (ring/router
+            (concat
+              [["/ws" {:get(fn [req]
+                             (if (http/ws-upgrade-request? req)
+                               (http/ws-upgrade-response websocket-handler)
+                               {:status 400
+                                :body   "Invalid websocket upgrade request"}))}]
+               routes])))
+        (swagger-ui/create-swagger-ui-handler
+          {:path   "/"
+           :config {:validatorUrl     nil
+                    :operationsSorter "alpha"}})
+        (ring/create-default-handler)))))

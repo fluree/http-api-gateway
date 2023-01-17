@@ -20,7 +20,7 @@
 
 (defn transact
   [{:keys [fluree/conn] {{:keys [action ledger txn defaultContext]} :body} :parameters}]
-  (println "\n\nTransacting to" ledger ":" (pr-str txn))
+  (println "\nTransacting to" ledger ":" (pr-str txn))
   (let [[ledger status] (if (deref! (fluree/exists? conn ledger))
                           (do
                             (log/debug "transact - Ledger" ledger "exists; loading it")
