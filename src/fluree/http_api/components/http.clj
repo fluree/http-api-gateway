@@ -55,6 +55,15 @@
                 500 {:body string?}}
    :handler    ledger/query})
 
+(def history-endpoint
+  {:summary "Endpoint for submitting history queries"
+   :parameters {:body {:ledger string?
+                       :query  map?}}
+   :responses  {200 {:body sequential?}
+                400 {:body string?}
+                500 {:body string?}}
+   :handler    ledger/history})
+
 (defn wrap-assoc-conn
   [conn handler]
   (fn [req]
@@ -139,8 +148,8 @@
   (let [default-fdb-middleware [[10 wrap-cors]
                                 [10 (partial wrap-assoc-conn conn)]
                                 [100 wrap-set-fuel-header]]
-        fdb-middleware (sort-middleware-by-weight
-                         (concat default-fdb-middleware middleware))]
+        fdb-middleware         (sort-middleware-by-weight
+                                 (concat default-fdb-middleware middleware))]
     (ring/ring-handler
       (ring/router
         [["/swagger.json"
@@ -159,7 +168,10 @@
                    :handler    ledger/transact}}]
           ["/query"
            {:get  query-endpoint
-            :post query-endpoint}]]]
+            :post query-endpoint}]
+          ["/history"
+           {:get  history-endpoint
+            :post history-endpoint}]]]
         {:data {:coercion   reitit.coercion.spec/coercion
                 :muuntaja   (m/create
                               (assoc-in
