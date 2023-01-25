@@ -36,7 +36,7 @@
                     fluree/db
                     (fluree/stage txn {:js? true})
                     deref!
-                    fluree/commit!
+                    (->> (fluree/commit! ledger))
                     deref!)]
     {:status status
      :body   (-> db
