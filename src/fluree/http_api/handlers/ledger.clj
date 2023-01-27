@@ -38,7 +38,7 @@
         ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
         db      (-> ledger
                     fluree/db
-                    (fluree/stage txn {:js? true})
+                    (fluree/stage txn {:context-type :string})
                     deref!
                     (->> (fluree/commit! ledger))
                     deref!)]
@@ -48,16 +48,19 @@
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
   (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-        query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+        query* (-> query
+                   (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {}))
+                   (assoc-in [:opts :context-type] :string))]
     (log/debug "query - Querying ledger" ledger "-" query*)
     {:status 200
-     :body   (deref! (fluree/query db (assoc-in query* [:opts :js?] true)))}))
+     :body   (deref! (fluree/query db query*))}))
 
 (defn history
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
   (let [ledger* (->> ledger (fluree/load conn) deref!)
-        query*  (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+        query*  (-> query
+                    (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {}))
+                    (assoc-in [:opts :context-type] :string))]
     (log/debug "history - Querying ledger" ledger "-" query*)
     {:status 200
-     :body   (deref! (fluree/history ledger*
-                                     (assoc-in query* [:opts :js?] true)))}))
+     :body   (deref! (fluree/history ledger* query*))}))
