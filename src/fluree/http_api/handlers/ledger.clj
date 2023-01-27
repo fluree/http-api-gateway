@@ -13,23 +13,27 @@
       res)))
 
 (defn create
-  [{:keys [conn name default-context]}]
-  (log/info "Creating ledger" name)
-  (log/debug "New ledger default context:" default-context)
-  (deref! (fluree/create conn name {:context default-context})))
+  [{:keys [fluree/conn] {{:keys [ledger txn]} :body} :parameters}]
+  (log/info "Creating ledger" ledger)
+  (let [ledger* (deref! (fluree/create conn ledger))
+        address (:address ledger*)
+        db      (-> ledger*
+                    fluree/db
+                    (fluree/stage txn)
+                    deref!
+                    (->> (fluree/commit! ledger*))
+                    deref!)]
+    {:status 201
+     :body (-> db (select-keys [:alias :t]) (assoc :address address))}))
 
 (defn transact
-  [{:keys [fluree/conn] {{:keys [action ledger txn defaultContext]} :body} :parameters}]
+  [{:keys [fluree/conn] {{:keys [ledger txn]} :body} :parameters}]
   (println "\nTransacting to" ledger ":" (pr-str txn))
-  (let [[ledger status] (if (deref! (fluree/exists? conn ledger))
-                          (do
-                            (log/debug "transact - Ledger" ledger "exists; loading it")
-                            [(deref! (fluree/load conn ledger)) 200])
-                          (if (= :new (keyword action))
-                            (do
-                              (log/debug "transact - Ledger" ledger "does not exist; creating it")
-                              [(create {:conn conn, :name ledger :default-context (or defaultContext (get txn "@context"))}) 201])
-                            (throw (ex-info "Ledger does not exist" {:ledger ledger}))))
+  (let [ledger  (if (deref! (fluree/exists? conn ledger))
+                  (do
+                    (log/debug "transact - Ledger" ledger "exists; loading it")
+                    (deref! (fluree/load conn ledger)))
+                  (throw (ex-info "Ledger does not exist" {:ledger ledger})))
         address (:address ledger)
         ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
         db      (-> ledger
@@ -38,10 +42,8 @@
                     deref!
                     (->> (fluree/commit! ledger))
                     deref!)]
-    {:status status
-     :body   (-> db
-                 (select-keys [:alias :t])
-                 (assoc :address address))}))
+    {:status 200
+     :body   (-> db (select-keys [:alias :t]) (assoc :address address))}))
 
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]

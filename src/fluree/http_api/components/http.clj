@@ -31,7 +31,8 @@
                       :strings #{"new" "insert"}))
 (s/def ::ledger ::non-empty-string)
 (s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
-(s/def ::defaultContext map?)
+(s/def ::context map?)
+(s/def ::defaults (s/keys :opt-un [::context]))
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -158,10 +159,18 @@
                  :swagger {:info {:title "Fluree HTTP API"}}
                  :handler (swagger/create-swagger-handler)}}]
          ["/fluree" {:middleware fluree-middleware}
+          ["/create"
+           {:post {:summary    "Endpoint for creating new ledgers"
+                   :parameters {:body (s/keys :opt-un [::defaults]
+                                              :req-un [::ledger ::txn])}
+                   :responses  {201 {:body (s/keys :opt-un [::address ::id]
+                                                   :req-un [::alias ::t])}
+                                400 {:body string?}
+                                500 {:body string?}}
+                   :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body (s/keys :opt-un [::action ::defaultContext]
-                                              :req-un [::ledger ::txn])}
+                   :parameters {:body (s/keys :req-un [::ledger ::txn])}
                    :responses  {200 {:body (s/keys :opt-un [::address ::id]
                                                    :req-un [::alias ::t])}
                                 400 {:body string?}
