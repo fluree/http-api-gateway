@@ -145,18 +145,19 @@
   [{:keys [:fluree/conn :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
-  (let [default-fdb-middleware [[10 wrap-cors]
-                                [10 (partial wrap-assoc-conn conn)]
-                                [100 wrap-set-fuel-header]]
-        fdb-middleware         (sort-middleware-by-weight
-                                 (concat default-fdb-middleware middleware))]
+  (let [default-fluree-middleware [[10 wrap-cors]
+                                   [10 (partial wrap-assoc-conn conn)]
+                                   [100 wrap-set-fuel-header]]
+        fluree-middleware         (sort-middleware-by-weight
+                                    (concat default-fluree-middleware
+                                            middleware))]
     (ring/ring-handler
       (ring/router
         [["/swagger.json"
           {:get {:no-doc  true
                  :swagger {:info {:title "Fluree HTTP API"}}
                  :handler (swagger/create-swagger-handler)}}]
-         ["/fdb" {:middleware fdb-middleware}
+         ["/fluree" {:middleware fluree-middleware}
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body (s/keys :opt-un [::action ::defaultContext]
