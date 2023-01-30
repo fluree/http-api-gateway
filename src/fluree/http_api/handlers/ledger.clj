@@ -83,7 +83,7 @@
 (defn history
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
   (let [ledger* (load-ledger conn ledger)
-        query*  (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+        query*  (keywordize-keys query)]
     (log/debug "history - Querying ledger" ledger "-" query*)
     {:status 200
      :body   (deref! (fluree/history ledger*
