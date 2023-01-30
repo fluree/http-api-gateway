@@ -4,6 +4,13 @@
     [fluree.db.util.core :as util]
     [fluree.db.util.log :as log]))
 
+(defn keywordize-keys
+  "Transforms all top-level map keys to keywords."
+  [m]
+  (reduce-kv (fn [m* k v]
+               (assoc m* (keyword k) v))
+             {} m))
+
 (defn deref!
   "Derefs promise p and throws if the result is an exception, returns it otherwise."
   [p]
@@ -58,18 +65,20 @@
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
   (let [db     (load-db conn ledger)
-        query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+        query* (keywordize-keys query)]
     (log/debug "query - Querying ledger" ledger "-" query*)
     {:status 200
      :body   (deref! (fluree/query db (assoc-in query* [:opts :js?] true)))}))
 
 (defn multi-query
   [{:keys [fluree/conn] {{:keys [ledger multi-query]} :body} :parameters}]
-  (let [db     (load-db conn ledger)
-        query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+  (let [db           (load-db conn ledger)
+        multi-query* (reduce-kv (fn [m k v]
+                                  (assoc m k (keywordize-keys v)))
+                                {} multi-query)]
     (log/debug "multi-query - Querying ledger" ledger "-" multi-query)
     {:status 200
-     :body   (deref! (fluree/query db (assoc-in query* [:opts :js?] true)))}))
+     :body   (deref! (fluree/multi-query db (assoc-in multi-query* [:opts :js?] true)))}))
 
 (defn history
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
