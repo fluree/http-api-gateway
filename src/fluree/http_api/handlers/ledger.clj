@@ -12,6 +12,18 @@
       (throw res)
       res)))
 
+(defn load-ledger
+  [conn ledger]
+  (->> ledger
+       (fluree/load conn)
+       deref!))
+
+(defn load-db
+  [conn ledger]
+  (-> conn
+      (load-ledger ledger)
+      fluree/db))
+
 (defn create
   [{:keys [conn name default-context]}]
   (log/info "Creating ledger" name)
@@ -45,15 +57,23 @@
 
 (defn query
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
-  (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
+  (let [db     (load-db conn ledger)
         query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
     (log/debug "query - Querying ledger" ledger "-" query*)
     {:status 200
      :body   (deref! (fluree/query db (assoc-in query* [:opts :js?] true)))}))
 
+(defn multi-query
+  [{:keys [fluree/conn] {{:keys [ledger multi-query]} :body} :parameters}]
+  (let [db     (load-db conn ledger)
+        query* (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
+    (log/debug "multi-query - Querying ledger" ledger "-" multi-query)
+    {:status 200
+     :body   (deref! (fluree/query db (assoc-in query* [:opts :js?] true)))}))
+
 (defn history
   [{:keys [fluree/conn] {{:keys [ledger query]} :body} :parameters}]
-  (let [ledger* (->> ledger (fluree/load conn) deref!)
+  (let [ledger* (load-ledger conn ledger)
         query*  (reduce-kv (fn [acc k v] (assoc acc (keyword k) v)) {} query)]
     (log/debug "history - Querying ledger" ledger "-" query*)
     {:status 200
