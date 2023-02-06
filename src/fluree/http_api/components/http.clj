@@ -59,7 +59,7 @@
   {:summary    "Endpoint for submitting multi-queries"
    :parameters {:body {:ledger string?
                        :query  map?}}
-   :responses  {200 {:body sequential?}
+   :responses  {200 {:body map?}
                 400 {:body string?}
                 500 {:body string?}}
    :handler    ledger/multi-query})
