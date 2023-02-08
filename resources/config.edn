@@ -14,4 +14,10 @@
                                                   :docker 4}]
                      :storage-path #or [#env FLUREE_STORAGE_PATH
                                         #profile {:dev    "data"
-                                                  :docker "data"}]}}
+                                                  :docker "data"}]
+                     :defaults     {:context
+                                    #or [#env FLUREE_DEFAULT_CONTEXT
+                                         #profile {:dev
+                                                   {:id   "@id"
+                                                    :type "@type"
+                                                    :ex   "http://example.com/"}}]}}}
