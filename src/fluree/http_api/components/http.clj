@@ -193,7 +193,7 @@
                              (exception/create-exception-middleware
                                {::exception/default
                                 (partial exception/wrap-log-to-console
-                                         exception/default-handler)})
+                                         exception/http-response-handler)})
                              muuntaja/format-request-middleware
                              coercion/coerce-response-middleware
                              coercion/coerce-request-middleware]}})
