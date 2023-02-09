@@ -78,6 +78,7 @@
               :alias   ledger-name
               :t       -1}
              (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
+
   (testing "can create a new ledger w/ EDN"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
@@ -93,7 +94,21 @@
       (is (= {:address address
               :alias   ledger-name
               :t       -1}
-             (-> res :body edn/read-string))))))
+             (-> res :body edn/read-string)))))
+
+  (testing "responds with 409 error if ledger already exists"
+    (let [ledger-name (str "create-endpoint-" (random-uuid))
+          req         (pr-str {:ledger  ledger-name
+                               :context {:foo "http://foobar.com/"}
+                               :txn     [{:id      :ex/create-test
+                                          :type    :foo/test
+                                          :ex/name "create-endpoint-test"}]})
+          headers     {"Content-Type" "application/edn"
+                       "Accept"       "application/edn"}
+          res-success (post :create {:body req :headers headers})
+          _           (assert (= 201 (:status res-success)))
+          res-fail    (post :create {:body req :headers headers})]
+      (is (= 409 (:status res-fail))))))
 
 ;; TODO: Make load work in memory conns and then reenable
 #_(deftest ^:integration transaction-test
