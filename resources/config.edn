@@ -4,17 +4,18 @@
                                           :docker 8090}]}
  :fluree/connection {:method       #or [#env FLUREE_STORAGE_METHOD
                                         #profile {:dev    :file
-                                                  :test   :memory
                                                   :prod   :ipfs
                                                   :docker :file}]
                      :parallelism  #or [#env FLUREE_CONN_PARALLELISM
                                         #profile {:dev    1
-                                                  :test   1
                                                   :prod   4
                                                   :docker 4}]
                      :storage-path #or [#env FLUREE_STORAGE_PATH
                                         #profile {:dev    "data"
                                                   :docker "data"}]
-                     ;; TODO: What should the default context really be?
-                     :defaults     {:context {:id "@id", :type "@type",
-                                              :ex "http://example.com/"}}}}
+                     :defaults     {:context
+                                    #or [#env FLUREE_DEFAULT_CONTEXT
+                                         #profile {:dev
+                                                   {:id   "@id"
+                                                    :type "@type"
+                                                    :ex   "http://example.com/"}}]}}}

@@ -57,12 +57,10 @@
   Returns a zero-arity fn to shut down the server."
   [{:keys [profile] :or {profile :dev} :as opts}]
   (let [cfg-overrides (dissoc opts :profile)
-        ec            (env-config profile)
-        merged-cfg    {[:env] (merge-with merge ec cfg-overrides)}]
-    (log/debug "run-server cfg-overrides:" (pr-str cfg-overrides))
-    (log/debug "run-server merged config:" (pr-str merged-cfg))
-    (let [system (ds/start profile merged-cfg)]
-      #(ds/stop system))))
+        overide-cfg   #(merge-with merge % cfg-overrides)
+        _             (log/debug "run-server cfg-overrides:" cfg-overrides)
+        system        (ds/start profile overide-cfg)]
+    #(ds/stop system)))
 
 (defn -main
   [& args]
