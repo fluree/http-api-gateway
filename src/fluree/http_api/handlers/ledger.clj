@@ -19,13 +19,15 @@
     (try
       (handler req)
       (catch ExceptionInfo e
-        (let [msg   (ex-message e)
-              {:keys [status] :as data} (ex-data e)
-              error (dissoc data :status)]
-          (throw (ex-info "Error in ledger handler"
-                          {:response
-                           {:status status
-                            :body   (assoc error :message msg)}}))))
+        (if (-> e ex-data (contains? :response))
+          (throw e)
+          (let [msg   (ex-message e)
+                {:keys [status] :as data :or {status 500}} (ex-data e)
+                error (dissoc data :status)]
+            (throw (ex-info "Error in ledger handler"
+                            {:response
+                             {:status status
+                              :body   (assoc error :message msg)}})))))
       (catch Throwable t
         (throw (ex-info "Error in ledger handler"
                         {:response {:status 500
@@ -50,19 +52,29 @@
 (def create
   (error-catching-handler
     (fn [{:keys [fluree/conn] {{:keys [ledger txn] :as body} :body} :parameters}]
-      (log/info "Creating ledger" ledger)
-      (let [opts    (txn-body->opts body)
-            _       (log/debug "create opts:" opts)
-            ledger* (deref! (fluree/create conn ledger opts))
-            address (:address ledger*)
-            db      (-> ledger*
-                        fluree/db
-                        (fluree/stage txn opts)
-                        deref!
-                        (->> (fluree/commit! ledger*))
-                        deref!)]
-        {:status 201
-         :body   (-> db (select-keys [:alias :t]) (assoc :address address))}))))
+      (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
+        (log/debug "Ledger" ledger "exists?" ledger-exists?)
+        (if ledger-exists?
+          (let [err-message (str "Ledger " ledger " already exists")]
+            (throw (ex-info err-message
+                            {:response {:status 409
+                                        :body   {:error err-message}}})))
+          (do
+            (log/info "Creating ledger" ledger)
+            (let [opts    (txn-body->opts body)
+                  _       (log/debug "create opts:" opts)
+                  ledger* (deref! (fluree/create conn ledger opts))
+                  address (:address ledger*)
+                  db      (-> ledger*
+                              fluree/db
+                              (fluree/stage txn opts)
+                              deref!
+                              (->> (fluree/commit! ledger*))
+                              deref!)]
+              {:status 201
+               :body   (-> db
+                           (select-keys [:alias :t])
+                           (assoc :address address))})))))))
 
 (def transact
   (error-catching-handler
