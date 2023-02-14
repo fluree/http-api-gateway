@@ -120,14 +120,15 @@
 
 (def multi-query
   (error-catching-handler
-   (fn [{:keys [fluree/conn] {{:keys [ledger multi-query]} :body} :parameters}]
+   (fn [{:keys [fluree/conn] {{:keys [ledger multi-query] :as body} :body} :parameters}]
      (let [db           (->> ledger (fluree/load conn) deref! fluree/db)
-           multi-query* (reduce-kv (fn [m k v]
-                                     (assoc m k (keywordize-keys v)))
-                                   {} multi-query)]
+           multi-query* (-> (reduce-kv (fn [m k v]
+                                         (assoc m k (keywordize-keys v)))
+                                       {} multi-query)
+                            (assoc :opts (query-body->opts body)))]
        (log/debug "multi-query - Querying ledger" ledger "-" multi-query)
        {:status 200
-        :body   (deref! (fluree/multi-query db (assoc-in multi-query* [:opts :js?] true)))}))))
+        :body   (deref! (fluree/multi-query db multi-query*))}))))
 
 
 (def history
