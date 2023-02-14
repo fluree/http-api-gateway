@@ -31,7 +31,7 @@
                       :strings #{"new" "insert"}))
 (s/def ::ledger ::non-empty-string)
 (s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
-(s/def ::defaultContext map?)
+(s/def ::context map?)
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -154,22 +154,31 @@
   [{:keys [:fluree/conn :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
-  (let [default-fdb-middleware [[10 wrap-cors]
-                                [10 (partial wrap-assoc-conn conn)]
-                                [100 wrap-set-fuel-header]]
-        fdb-middleware         (sort-middleware-by-weight
-                                 (concat default-fdb-middleware middleware))]
+  (let [default-fluree-middleware [[10 wrap-cors]
+                                   [10 (partial wrap-assoc-conn conn)]
+                                   [100 wrap-set-fuel-header]]
+        fluree-middleware         (sort-middleware-by-weight
+                                    (concat default-fluree-middleware
+                                            middleware))]
     (ring/ring-handler
       (ring/router
         [["/swagger.json"
           {:get {:no-doc  true
                  :swagger {:info {:title "Fluree HTTP API"}}
                  :handler (swagger/create-swagger-handler)}}]
-         ["/fdb" {:middleware fdb-middleware}
+         ["/fluree" {:middleware fluree-middleware}
+          ["/create"
+           {:post {:summary    "Endpoint for creating new ledgers"
+                   :parameters {:body (s/keys :opt-un [::context]
+                                              :req-un [::ledger ::txn])}
+                   :responses  {201 {:body (s/keys :opt-un [::address ::id]
+                                                   :req-un [::alias ::t])}
+                                400 {:body string?}
+                                500 {:body string?}}
+                   :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body (s/keys :opt-un [::action ::defaultContext]
-                                              :req-un [::ledger ::txn])}
+                   :parameters {:body (s/keys :req-un [::ledger ::txn])}
                    :responses  {200 {:body (s/keys :opt-un [::address ::id]
                                                    :req-un [::alias ::t])}
                                 400 {:body string?}
@@ -196,7 +205,7 @@
                              (exception/create-exception-middleware
                                {::exception/default
                                 (partial exception/wrap-log-to-console
-                                         exception/default-handler)})
+                                         exception/http-response-handler)})
                              muuntaja/format-request-middleware
                              coercion/coerce-response-middleware
                              coercion/coerce-request-middleware]}})

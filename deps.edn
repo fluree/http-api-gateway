@@ -11,10 +11,21 @@
          metosin/spec-tools             {:mvn/version "0.10.5"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :sha     "3302572e091c6b0cfca9644839664ea02ec2760f"}}
+                                         :sha     "59d6a86175744362620d2d5efdf2d31f506a3a18"}}
 
  :aliases
  {:build
   {:deps       {io.github.seancorfield/build-clj
                 {:git/tag "v0.8.5" :git/sha "de693d0"}}
-   :ns-default build}}}
+   :ns-default build}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.77.1236"}
+                 clj-http/clj-http   {:mvn/version "3.12.3"}}
+   :exec-fn     kaocha.runner/exec-fn
+   :exec-args   {}}
+
+  :run-dev
+  {:exec-fn   fluree.http-api.system/run-server
+   :exec-args {:profile :dev}}}}
