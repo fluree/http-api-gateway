@@ -55,6 +55,15 @@
                 500 {:body string?}}
    :handler    ledger/query})
 
+(def multi-query-endpoint
+  {:summary    "Endpoint for submitting multi-queries"
+   :parameters {:body {:ledger string?
+                       :query  map?}}
+   :responses  {200 {:body map?}
+                400 {:body string?}
+                500 {:body string?}}
+   :handler    ledger/multi-query})
+
 (def history-endpoint
   {:summary "Endpoint for submitting history queries"
    :parameters {:body {:ledger string?
@@ -178,6 +187,9 @@
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
+          ["/multi-query"
+           {:get  multi-query-endpoint
+            :post multi-query-endpoint}]
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]]]
