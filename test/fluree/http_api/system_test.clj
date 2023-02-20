@@ -27,7 +27,8 @@
                              {:id     "@id"
                               :type   "@type"
                               :ex     "http://example.com/"
-                              :schema "http://schema.org/"}}}}}))
+                              :schema "http://schema.org/"
+                              :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"}}}}}))
 
 (defn run-test-server
   [run-tests]
@@ -110,25 +111,58 @@
           res-fail    (post :create {:body req :headers headers})]
       (is (= 409 (:status res-fail))))))
 
-;; TODO: Make load work in memory conns and then reenable
-#_(deftest ^:integration transaction-test
-    (testing "can transact in JSON"
-      (let [ledger-name (create-rand-ledger "transact-endpoint-test")
-            _           (println "RAND LEDGER:" ledger-name)
-            address     (str "fluree:memory://" ledger-name "/main/head")
-            req         (json/write-value-as-string
-                          {:ledger  ledger-name
-                           :context {:bar "http://barfoo.com/"}
-                           :txn     {:id      :ex/transaction-test
-                                     :type    :bar/test
-                                     :ex/name "transact-endpoint-test"}})
-            headers     {"Content-Type" "application/json"
-                         "Accept"       "application/json"}
-            res         (post :transact {:body req :headers headers})]
-        (is (= 200 (:status res)))
-        (is (= {:address address, :alias ledger-name, :t -2}
-               (-> res :body (json/read-value json/keyword-keys-object-mapper)))))))
+(deftest ^:integration transaction-test
+  (testing "can transact in JSON"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          address     (str "fluree:memory://" ledger-name "/main/head")
+          req         (json/write-value-as-string
+                        {:ledger ledger-name
+                         :txn    {:id      :ex/transaction-test
+                                  :type    :schema/Test
+                                  :ex/name "transact-endpoint-json-test"}})
+          headers     {"Content-Type" "application/json"
+                       "Accept"       "application/json"}
+          res         (post :transact {:body req :headers headers})]
+      (is (= 200 (:status res)))
+      (is (= {:address address, :alias ledger-name, :t -2}
+             (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
+
+  (testing "can transact in EDN"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
+          address     (str "fluree:memory://" ledger-name "/main/head")
+          req         (pr-str
+                        {:ledger ledger-name
+                         :txn    [{:id      :ex/transaction-test
+                                   :type    :schema/Test
+                                   :ex/name "transact-endpoint-edn-test"}]})
+          headers     {"Content-Type" "application/edn"
+                       "Accept"       "application/edn"}
+          res         (post :transact {:body req :headers headers})]
+      (is (= 200 (:status res)))
+      (is (= {:address address, :alias ledger-name, :t -2}
+             (-> res :body edn/read-string))))))
 
 (deftest ^:integration query-test
-  ;; TODO
-  (is true))
+  (testing "can query a basic entity"
+    (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
+          edn-headers {"Content-Type" "application/edn"
+                       "Accept"       "application/edn"}
+          txn-req     {:body
+                       (pr-str {:ledger ledger-name
+                                :txn    [{:id      :ex/query-test
+                                          :type    :schema/Test
+                                          :ex/name "query-test"}]})
+                       :headers edn-headers}
+          txn-res     (post :transact txn-req)
+          _           (assert (= 200 (:status txn-res)))
+          query-req   {:body
+                       (pr-str {:ledger ledger-name
+                                :query  {:select '{?t [:*]}
+                                         :where  '[[?t :type :schema/Test]]}})
+                       :headers edn-headers}
+          query-res   (post :query query-req)]
+      (is (= 200 (:status query-res)))
+      (is (= [{:id       :ex/query-test
+               :rdf/type [:schema/Test]
+               :ex/name  "query-test"}]
+             (-> query-res :body edn/read-string))))))
