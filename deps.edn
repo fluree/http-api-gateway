@@ -8,10 +8,10 @@
          org.slf4j/slf4j-api            {:mvn/version "2.0.5"}
          metosin/reitit                 {:mvn/version "0.5.18"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
-         metosin/spec-tools             {:mvn/version "0.10.5"}
+         metosin/malli                  {:mvn/version "0.10.1"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :sha     "9e9718b11e954c47621ea2c4651105f6d0765535"}}
+                                         :git/sha "f0c10635d6a99e791d59676e7ed4191e82083486"}}
 
  :aliases
  {:dev
