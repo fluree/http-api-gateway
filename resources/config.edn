@@ -18,4 +18,5 @@
                                          #profile {:dev
                                                    {:id   "@id"
                                                     :type "@type"
+                                                    :f    "https://ns.flur.ee/ledger#"
                                                     :ex   "http://example.com/"}}]}}}

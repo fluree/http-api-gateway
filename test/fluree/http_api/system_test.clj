@@ -28,6 +28,7 @@
                               :type   "@type"
                               :ex     "http://example.com/"
                               :schema "http://schema.org/"
+                              :f      "https://ns.flur.ee/ledger#"
                               :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"}}}}}))
 
 (defn run-test-server
