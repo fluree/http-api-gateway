@@ -1,7 +1,6 @@
 (ns fluree.http-api.components.http
   (:require
     [donut.system :as ds]
-    [jsonista.core :as j]
     [ring.adapter.jetty9 :as http]
     [reitit.ring :as ring]
     [reitit.coercion.malli]
@@ -12,8 +11,6 @@
     [reitit.ring.middleware.exception :as exception]
     [fluree.http-api.handlers.ledger :as ledger]
     [muuntaja.core :as muuntaja]
-    [muuntaja.format.json :as json-format]
-    [muuntaja.format.core :as mf]
     [ring.middleware.cors :as rmc]
     [fluree.db.util.log :as log]
     [malli.core :as m]
