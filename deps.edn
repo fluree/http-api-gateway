@@ -10,8 +10,8 @@
          metosin/muuntaja               {:mvn/version "0.6.8"}
          metosin/malli                  {:mvn/version "0.10.1"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
-         com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "f0c10635d6a99e791d59676e7ed4191e82083486"}}
+         com.fluree/db                  {:git/url "https://github.com/fluree/db"
+                                         :git/sha "775623e4de608b68a70960447ac1b9317316937d"}}
 
  :aliases
  {:dev

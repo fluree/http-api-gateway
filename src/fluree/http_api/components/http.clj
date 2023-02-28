@@ -15,8 +15,9 @@
     [fluree.db.util.log :as log]
     [malli.core :as m]
     [malli.experimental.lite :as l]
-    [fluree.db.query.history :refer [HistoryQuery]]
-    [fluree.db.query.fql.syntax :as fql]))
+    [fluree.db.query.history :as fqh :refer [HistoryQuery]]
+    [fluree.db.query.fql.syntax :as fql]
+    [fluree.db.json-ld.transact :as ftx]))
 
 (set! *warn-on-reflection* true)
 
@@ -27,10 +28,8 @@
 (def natural-int (m/schema [:int {:min 0}]))
 (def t natural-int)
 (def ledger-alias non-empty-string)
-(def txn (m/schema [:orn
-                    [:single-map [:map-of :any :any]]
-                    [:collection-of-maps [:sequential map?]]]))
-(def context (m/schema [:map-of :any :any]))
+(def txn (m/schema ::ftx/txn {:registry ftx/registry}))
+(def context (m/schema [:map-of :keyword :any]))
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -50,7 +49,8 @@
    :parameters {:body {:ledger ledger-alias
                        :query  (m/schema ::fql/analytical-query
                                          {:registry fql/registry})}}
-   :responses  {200 {:body sequential?}
+   :responses  {200 {:body (m/schema ::fql/query-results
+                                     {:registry fql/registry})}
                 400 {:body non-empty-string}
                 500 {:body non-empty-string}}
    :handler    ledger/query})
@@ -60,7 +60,8 @@
    :parameters {:body {:ledger ledger-alias
                        :query  (m/schema ::fql/multi-query
                                          {:registry fql/registry})}}
-   :responses  {200 {:body map?}
+   :responses  {200 {:body (m/schema ::fql/multi-query-results
+                                     {:registry fql/registry})}
                 400 {:body non-empty-string}
                 500 {:body non-empty-string}}
    :handler    ledger/multi-query})
@@ -69,7 +70,8 @@
   {:summary    "Endpoint for submitting history queries"
    :parameters {:body {:ledger ledger-alias
                        :query  HistoryQuery}}
-   :responses  {200 {:body sequential?}
+   :responses  {200 {:body (m/schema ::fqh/history-query-results
+                                     {:registry fqh/registry})}
                 400 {:body non-empty-string}
                 500 {:body non-empty-string}}
    :handler    ledger/history})
@@ -83,9 +85,10 @@
 
 (defn wrap-cors
   [handler]
-  (rmc/wrap-cors handler
-                 :access-control-allow-origin [#".*"]
-                 :access-control-allow-methods [:get :post]))
+  (rmc/wrap-cors
+    handler
+    :access-control-allow-origin [#".*"]
+    :access-control-allow-methods [:get :post]))
 
 (defn wrap-set-fuel-header
   [handler]
@@ -187,8 +190,8 @@
                                             :t       t
                                             :address (l/optional address)
                                             :id      (l/optional id)}}
-                                400 {:body non-empty-string}
-                                500 {:body non-empty-string}}
+                                400 {:body [:or map? non-empty-string]}
+                                500 {:body [:or map? non-empty-string]}}
                    :handler    ledger/transact}}]
           ["/query"
            {:get  query-endpoint
