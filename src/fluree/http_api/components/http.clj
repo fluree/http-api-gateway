@@ -205,9 +205,9 @@
         {:data {:coercion   reitit.coercion.malli/coercion
                 :muuntaja   muuntaja/instance
                 :middleware [swagger/swagger-feature
-                             muuntaja/format-negotiate-middleware
-                             muuntaja/format-response-middleware
-                             muuntaja/format-request-middleware]}})
+                             muuntaja-mw/format-negotiate-middleware
+                             muuntaja-mw/format-response-middleware
+                             muuntaja-mw/format-request-middleware]}})
       (ring/routes
         (ring/ring-handler
           (ring/router
