@@ -150,13 +150,40 @@
      :subprotocol (first provided-subprotocols)
      :extensions  provided-extensions}))
 
+(defn debug-middleware
+  "Put this in anywhere in your middleware chain to get some insight into what's
+  happening there. Logs the request and response at DEBUG level, prefixed with
+  the name argument."
+  [name]
+  (fn [handler]
+    (fn [req]
+      (log/debug name "got request:" req)
+      (let [resp (handler req)]
+        (log/debug name "got response:" resp)
+        resp))))
+
 (defn app
   [{:keys [:fluree/conn :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [default-fluree-middleware [[10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
-                                   [100 wrap-set-fuel-header]]
+                                   [100 wrap-set-fuel-header]
+                                   [200 muuntaja/format-negotiate-middleware]
+                                   [300 muuntaja/format-response-middleware]
+                                   [400 muuntaja/format-request-middleware]
+                                   [500 coercion/coerce-exceptions-middleware]
+                                   [600 coercion/coerce-response-middleware]
+                                   [700 coercion/coerce-request-middleware]
+                                   ;; Exception middleware should always be last.
+                                   ;; Otherwise middleware that comes after it
+                                   ;; will be skipped on response if handler code
+                                   ;; throws an exception b/c this is what catches
+                                   ;; them and turns them into responses.
+                                   [1000 (exception/create-exception-middleware
+                                           {::exception/default
+                                            (partial exception/wrap-log-to-console
+                                                     exception/http-response-handler)})]]
         fluree-middleware         (sort-middleware-by-weight
                                     (concat default-fluree-middleware
                                             middleware))]
@@ -199,16 +226,7 @@
                                 m/default-options
                                 [:formats "application/json"]
                                 fluree-json-ld-format))
-                :middleware [swagger/swagger-feature
-                             muuntaja/format-negotiate-middleware
-                             muuntaja/format-response-middleware
-                             (exception/create-exception-middleware
-                               {::exception/default
-                                (partial exception/wrap-log-to-console
-                                         exception/http-response-handler)})
-                             muuntaja/format-request-middleware
-                             coercion/coerce-response-middleware
-                             coercion/coerce-request-middleware]}})
+                :middleware [swagger/swagger-feature]}})
       (ring/routes
         (ring/ring-handler
           (ring/router
