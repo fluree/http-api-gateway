@@ -150,6 +150,18 @@
      :subprotocol (first provided-subprotocols)
      :extensions  provided-extensions}))
 
+(defn debug-middleware
+  "Put this in anywhere in your middleware chain to get some insight into what's
+  happening there. Logs the request and response at DEBUG level, prefixed with
+  the name argument."
+  [name]
+  (fn [handler]
+    (fn [req]
+      (log/debug name "got request:" req)
+      (let [resp (handler req)]
+        (log/debug name "got response:" resp)
+        resp))))
+
 (defn app
   [{:keys [:fluree/conn :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
