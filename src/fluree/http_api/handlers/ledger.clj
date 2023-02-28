@@ -56,6 +56,11 @@
           (-> query keys first keyword?) (assoc :context-type :keyword)
           (-> query keys first string?) (assoc :context-type :string)))
 
+(defn ledger-summary
+  [db]
+  (assoc (-> db :ledger (select-keys [:alias :address]))
+         :t (-> db :commit :data :t)))
+
 (def create
   (error-catching-handler
     (fn [{:keys [fluree/conn] {{:keys [ledger txn] :as body} :body} :parameters}]
@@ -79,9 +84,7 @@
                               (->> (fluree/commit! ledger*))
                               deref!)]
               {:status 201
-               :body   (-> db
-                           (select-keys [:alias :t])
-                           (assoc :address address))})))))))
+               :body   (ledger-summary db)})))))))
 
 (def transact
   (error-catching-handler
@@ -103,7 +106,7 @@
                         (->> (fluree/commit! ledger))
                         deref!)]
         {:status 200
-         :body   (-> db (select-keys [:alias :t]) (assoc :address address))}))))
+         :body   (ledger-summary db)}))))
 
 (def query
   (error-catching-handler
