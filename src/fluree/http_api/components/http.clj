@@ -25,7 +25,7 @@
 (s/def ::non-empty-string (s/and string? #(< 0 (count %))))
 (s/def ::address ::non-empty-string)
 (s/def ::id ::non-empty-string)
-(s/def ::t neg-int?)
+(s/def ::t nat-int?)
 (s/def ::alias ::non-empty-string)
 (s/def ::action (s/or :keywords #{:new :insert}
                       :strings #{"new" "insert"}))

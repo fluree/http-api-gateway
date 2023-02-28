@@ -77,7 +77,7 @@
       (is (= 201 (:status res)))
       (is (= {:address address
               :alias   ledger-name
-              :t       -1}
+              :t       1}
              (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
 
   (testing "can create a new ledger w/ EDN"
@@ -94,7 +94,7 @@
       (is (= 201 (:status res)))
       (is (= {:address address
               :alias   ledger-name
-              :t       -1}
+              :t       1}
              (-> res :body edn/read-string)))))
 
   (testing "responds with 409 error if ledger already exists"
@@ -124,7 +124,7 @@
                        "Accept"       "application/json"}
           res         (post :transact {:body req :headers headers})]
       (is (= 200 (:status res)))
-      (is (= {:address address, :alias ledger-name, :t -2}
+      (is (= {:address address, :alias ledger-name, :t 2}
              (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
 
   (testing "can transact in EDN"
@@ -139,7 +139,7 @@
                        "Accept"       "application/edn"}
           res         (post :transact {:body req :headers headers})]
       (is (= 200 (:status res)))
-      (is (= {:address address, :alias ledger-name, :t -2}
+      (is (= {:address address, :alias ledger-name, :t 2}
              (-> res :body edn/read-string))))))
 
 (deftest ^:integration query-test
