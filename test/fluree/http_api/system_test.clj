@@ -67,11 +67,11 @@
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {:ledger  ledger-name
-                         :context {:foo "http://foobar.com/"}
-                         :txn     [{:id      :ex/create-test
-                                    :type    :foo/test
-                                    :ex/name "create-endpoint-test"}]})
+                        {"ledger"  ledger-name
+                         "context" {"foo" "http://foobar.com/"}
+                         "txn"     [{"id"      "ex:create-test"
+                                     "type"    "foo:test"
+                                     "ex:name" "create-endpoint-test"}]})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res         (post :create {:body req :headers headers})]
@@ -121,10 +121,10 @@
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {:ledger ledger-name
-                         :txn    {:id      :ex/transaction-test
-                                  :type    :schema/Test
-                                  :ex/name "transact-endpoint-json-test"}})
+                        {"ledger" ledger-name
+                         "txn"    {"id"      "ex:transaction-test"
+                                   "type"    "schema:Test"
+                                   "ex:name" "transact-endpoint-json-test"}})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res         (post :transact {:body req :headers headers})]
@@ -181,27 +181,27 @@
                         "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
-                          {:ledger ledger-name
-                           :txn    [{:id      :ex/query-test
-                                     :type    :schema/Test
-                                     :ex/name "query-test"}]})
+                          {"ledger" ledger-name
+                           "txn"    [{"id"      "ex:query-test"
+                                      "type"    "schema:Test"
+                                      "ex:name" "query-test"}]})
                         :headers json-headers}
           txn-res      (post :transact txn-req)
-          _            (assert (= 200 (:status txn-res)))
+          _            (assert (= 200 (:status txn-res))
+                               (str "Transaction failed: " (pr-str txn-res)))
           query-req    {:body
                         (json/write-value-as-string
-                          {:ledger ledger-name
-                           :query  {:select '{?t [:*]}
-                                    :where  '[[?t :type "schema/Test"]]}})
+                          {"ledger" ledger-name
+                           "query"  {"select" '{?t ["*"]}
+                                     "where"  '[[?t "type" "schema:Test"]]}})
                         :headers json-headers}
           query-res    (post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Response was: " (pr-str query-res)))
-      (is (= [{:id       "ex/query-test"
-               :rdf/type ["schema/Test"]
-               :ex/name  "query-test"}]
-             (-> query-res :body
-                 (json/read-value json/keyword-keys-object-mapper)))))))
+      (is (= [{"id"       "ex:query-test"
+               "rdf:type" ["schema:Test"]
+               "ex:name"  "query-test"}]
+             (-> query-res :body json/read-value))))))
 
 (deftest ^:integration multi-query-test
   (testing "can run a multi-query w/ EDN"
@@ -238,32 +238,31 @@
     (let [ledger-name  (create-rand-ledger "multi-query-endpoint-test")
           json-headers {"Content-Type" "application/json"
                         "Accept"       "application/json"}
-          txn-req      {:body (json/write-value-as-string
-                                {:ledger ledger-name
-                                 :txn [{:id       :ex/wes
-                                        :type     :schema/Person
-                                        :ex/fname "Wes"}
-                                       {:id       :ex/ben
-                                        :type     :schema/Person
-                                        :ex/fname "Ben"}]})
+          txn-req      {:body    (json/write-value-as-string
+                                   {"ledger" ledger-name
+                                    "txn"    [{"id"       "ex:wes"
+                                               "type"     "schema:Person"
+                                               "ex:fname" "Wes"}
+                                              {"id"       "ex:ben"
+                                               "type"     "schema:Person"
+                                               "ex:fname" "Ben"}]})
                         :headers json-headers}
           {txn-status :status} (post :transact txn-req)
           _            (assert (= 200 txn-status))
-          query-req    {:body (json/write-value-as-string
-                                {:ledger ledger-name
-                                 :query
-                                 {:wes {:select '{?p [:*]}
-                                        :where  '[[?p :ex/fname "Wes"]]}
-                                  :ben {:select '{?p [:*]}
-                                        :where  '[[?p :ex/fname "Ben"]]}}})
+          query-req    {:body    (json/write-value-as-string
+                                   {"ledger" ledger-name
+                                    "query"
+                                    {"wes" {"select" '{?p ["*"]}
+                                            "where"  '[[?p "ex:fname" "Wes"]]}
+                                     "ben" {"select" '{?p ["*"]}
+                                            "where"  '[[?p "ex:fname" "Ben"]]}}})
                         :headers json-headers}
-          query-res     (post :multi-query query-req)]
+          query-res    (post :multi-query query-req)]
       (is (= 200 (:status query-res))
           (str "Response was: " (pr-str query-res)))
-      (is (= {:ben [{:id "ex/ben", :ex/fname "Ben", :rdf/type ["schema/Person"]}]
-              :wes [{:id "ex/wes", :ex/fname "Wes", :rdf/type ["schema/Person"]}]}
-             (-> query-res :body
-                 (json/read-value json/keyword-keys-object-mapper)))))))
+      (is (= {"ben" [{"id" "ex:ben", "ex:fname" "Ben", "rdf:type" ["schema:Person"]}]
+              "wes" [{"id" "ex:wes", "ex:fname" "Wes", "rdf:type" ["schema:Person"]}]}
+             (-> query-res :body json/read-value))))))
 
 (deftest ^:integration history-query-test
   (testing "can run a history query w/ EDN"
@@ -291,8 +290,9 @@
                                 {:ledger ledger-name
                                  :txn    [{:id     :ex/history-test
                                            :ex/age 42}]}))
-          {txn3-status :status} (post :transact txn3-req)
-          _           (assert (= 200 txn3-status))
+          {txn3-status :status :as txn3-resp} (post :transact txn3-req)
+          _           (assert (= 200 txn3-status)
+                              (str "Transaction failed: " (pr-str txn3-resp)))
           query-req   (assoc base-req
                         :body (pr-str
                                 {:ledger ledger-name
@@ -314,37 +314,36 @@
           base-req     {:headers json-headers}
           txn1-req     (assoc base-req
                          :body (json/write-value-as-string
-                                 {:ledger ledger-name
-                                  :txn    [{:id       :ex/history-test
-                                            :type     :schema/Test
-                                            :ex/fname "Wes"}]}))
+                                 {"ledger" ledger-name
+                                  "txn"    [{"id"       "ex:history-test"
+                                             "type"     "schema:Test"
+                                             "ex:fname" "Wes"}]}))
           {txn1-status :status} (post :transact txn1-req)
           _            (assert (= 200 txn1-status))
           txn2-req     (assoc base-req
                          :body (json/write-value-as-string
-                                 {:ledger ledger-name
-                                  :txn    [{:id       :ex/history-test
-                                            :ex/lname "Morgan"}]}))
+                                 {"ledger" ledger-name
+                                  "txn"    [{"id"       "ex:history-test"
+                                             "ex:lname" "Morgan"}]}))
           {txn2-status :status} (post :transact txn2-req)
           _            (assert (= 200 txn2-status))
           txn3-req     (assoc base-req
                          :body (json/write-value-as-string
-                                 {:ledger ledger-name
-                                  :txn    [{:id     :ex/history-test
-                                            :ex/age 42}]}))
+                                 {"ledger" ledger-name
+                                  "txn"    [{"id"     "ex:history-test"
+                                             "ex:age" 42}]}))
           {txn3-status :status} (post :transact txn3-req)
           _            (assert (= 200 txn3-status))
           query-req    (assoc base-req
                          :body (json/write-value-as-string
-                                 {:ledger ledger-name
-                                  :query  {:commit-details true
-                                           :t              {:at :latest}}}))
+                                 {"ledger" ledger-name
+                                  "query"  {"commit-details" true
+                                            "t"              {"at" "latest"}}}))
           query-res    (post :history query-req)]
       (is (= 200 (:status query-res))
           (str "Response was: " (pr-str query-res)))
-      (is (= [{:f/commit
-               {:f/data
-                {:f/assert  [{:id "ex/history-test", :ex/age 42}]
-                 :f/retract []}}}]
-             (-> query-res :body
-                 (json/read-value json/keyword-keys-object-mapper)))))))
+      (is (= [{"f:commit"
+               {"f:data"
+                {"f:assert"  [{"id" "ex:history-test", "ex:age" 42}]
+                 "f:retract" []}}}]
+             (-> query-res :body json/read-value))))))
