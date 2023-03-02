@@ -17,17 +17,17 @@
     [malli.experimental.lite :as l]
     [fluree.db.query.history :as fqh :refer [HistoryQuery]]
     [fluree.db.query.fql.syntax :as fql]
-    [fluree.db.json-ld.transact :as ftx]))
+    [fluree.db.json-ld.transact :as ftx]
+    [fluree.db.util.validation :as v]))
 
 (set! *warn-on-reflection* true)
 
 ;; TODO: Flesh this out some more
-(def non-empty-string (m/schema [:string {:min 1}]))
-(def address non-empty-string)
-(def id non-empty-string)
+(def address v/non-empty-string)
+(def id v/non-empty-string)
 (def natural-int (m/schema [:int {:min 0}]))
 (def t natural-int)
-(def ledger-alias non-empty-string)
+(def ledger-alias v/non-empty-string)
 (def txn (m/schema ::ftx/txn {:registry ftx/registry}))
 (def context (m/schema [:map-of :keyword :any]))
 
@@ -51,8 +51,8 @@
                                          {:registry fql/registry})}}
    :responses  {200 {:body (m/schema ::fql/query-results
                                      {:registry fql/registry})}
-                400 {:body non-empty-string}
-                500 {:body non-empty-string}}
+                400 {:body v/non-empty-string}
+                500 {:body v/non-empty-string}}
    :handler    ledger/query})
 
 (def multi-query-endpoint
@@ -62,8 +62,8 @@
                                          {:registry fql/registry})}}
    :responses  {200 {:body (m/schema ::fql/multi-query-results
                                      {:registry fql/registry})}
-                400 {:body non-empty-string}
-                500 {:body non-empty-string}}
+                400 {:body v/non-empty-string}
+                500 {:body v/non-empty-string}}
    :handler    ledger/multi-query})
 
 (def history-endpoint
@@ -72,8 +72,8 @@
                        :query  HistoryQuery}}
    :responses  {200 {:body (m/schema ::fqh/history-query-results
                                      {:registry fqh/registry})}
-                400 {:body non-empty-string}
-                500 {:body non-empty-string}}
+                400 {:body v/non-empty-string}
+                500 {:body v/non-empty-string}}
    :handler    ledger/history})
 
 (defn wrap-assoc-conn
@@ -179,8 +179,8 @@
                                             [:t t]
                                             [:address {:optional true} address]
                                             [:id {:optional true} id]]}
-                                400 {:body non-empty-string}
-                                500 {:body non-empty-string}}
+                                400 {:body v/non-empty-string}
+                                500 {:body v/non-empty-string}}
                    :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
@@ -190,8 +190,8 @@
                                             :t       t
                                             :address (l/optional address)
                                             :id      (l/optional id)}}
-                                400 {:body [:or map? non-empty-string]}
-                                500 {:body [:or map? non-empty-string]}}
+                                400 {:body [:or map? v/non-empty-string]}
+                                500 {:body [:or map? v/non-empty-string]}}
                    :handler    ledger/transact}}]
           ["/query"
            {:get  query-endpoint
