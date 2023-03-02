@@ -226,7 +226,12 @@
                                 m/default-options
                                 [:formats "application/json"]
                                 fluree-json-ld-format))
-                :middleware [swagger/swagger-feature]}})
+                :middleware [swagger/swagger-feature
+                            muuntaja/format-negotiate-middleware
+                            muuntaja/format-response-middleware
+                            muuntaja/format-request-middleware
+                            ]
+                }})
       (ring/routes
         (ring/ring-handler
           (ring/router
