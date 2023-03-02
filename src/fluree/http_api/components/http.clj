@@ -169,12 +169,9 @@
   (let [default-fluree-middleware [[10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
                                    [100 wrap-set-fuel-header]
-                                   [200 muuntaja/format-negotiate-middleware]
-                                   [300 muuntaja/format-response-middleware]
-                                   [400 muuntaja/format-request-middleware]
-                                   [500 coercion/coerce-exceptions-middleware]
-                                   [600 coercion/coerce-response-middleware]
-                                   [700 coercion/coerce-request-middleware]
+                                   [200 coercion/coerce-exceptions-middleware]
+                                   [300 coercion/coerce-response-middleware]
+                                   [400 coercion/coerce-request-middleware]
                                    ;; Exception middleware should always be last.
                                    ;; Otherwise middleware that comes after it
                                    ;; will be skipped on response if handler code
@@ -226,7 +223,10 @@
                                 m/default-options
                                 [:formats "application/json"]
                                 fluree-json-ld-format))
-                :middleware [swagger/swagger-feature]}})
+                :middleware [swagger/swagger-feature
+                             muuntaja/format-negotiate-middleware
+                             muuntaja/format-response-middleware
+                             muuntaja/format-request-middleware]}})
       (ring/routes
         (ring/ring-handler
           (ring/router
