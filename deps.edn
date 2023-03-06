@@ -6,12 +6,19 @@
          info.sunng/ring-jetty9-adapter {:mvn/version "0.18.1"}
          ch.qos.logback/logback-classic {:mvn/version "1.4.5"}
          org.slf4j/slf4j-api            {:mvn/version "2.0.5"}
-         metosin/reitit                 {:mvn/version "0.5.18"}
+         metosin/reitit                 {:mvn/version "0.6.0"}
+         metosin/reitit-malli           {:git/url "https://github.com/fluree/reitit.git"
+                                         :git/sha "8357e76462704eee82d75d22ba69cb316d5dc866"
+                                         :deps/root "modules/reitit-malli"}
+         metosin/reitit-swagger         {:git/url "https://github.com/fluree/reitit.git"
+                                         :git/sha "8357e76462704eee82d75d22ba69cb316d5dc866"
+                                         :deps/root "modules/reitit-swagger"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
-         metosin/malli                  {:mvn/version "0.10.1"}
+         metosin/malli                  {:git/url "https://github.com/fluree/malli.git"
+                                         :git/sha "23488b20ebe189b9eae43369b4799a8940978a05"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db"
-                                         :git/sha "775623e4de608b68a70960447ac1b9317316937d"}}
+                                         :git/sha "b68662319fbdbe5f68c60409ab26db2e36aa1b08"}}
 
  :aliases
  {:dev
