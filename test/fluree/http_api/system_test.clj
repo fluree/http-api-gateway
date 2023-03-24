@@ -28,7 +28,8 @@
                               :type   "@type"
                               :ex     "http://example.com/"
                               :schema "http://schema.org/"
-                              :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"}}}}}))
+                              :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                              :f      "https://ns.flur.ee/ledger#"}}}}}))
 
 (defn run-test-server
   [run-tests]
@@ -166,3 +167,35 @@
                :rdf/type [:schema/Test]
                :ex/name  "query-test"}]
              (-> query-res :body edn/read-string))))))
+
+(deftest ^:integration history-query-test
+  (testing "basic JSON history query works"
+    (let [ledger-name  (create-rand-ledger "history-query-basic-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                          {:ledger ledger-name
+                           :txn    [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query-req    {:body
+                        (json/write-value-as-string
+                          {:ledger ledger-name
+                           :query {:commit-details true
+                                   :t {:at :latest}}})
+                        :headers json-headers}
+          query-res    (post :history query-req)]
+      (is (= 200 (:status query-res))
+          (str "History query response was: " (pr-str query-res)))
+      (is (= [{"f:commit"
+               {"f:data"
+                {"f:assert"
+                 [{"ex:name" "query-test"
+                   "id" "ex:query-test"
+                   "rdf:type" ["schema:Test"]}]
+                 "f:retract" []}}}]
+             (-> query-res :body json/read-value))))))

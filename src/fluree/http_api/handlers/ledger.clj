@@ -137,11 +137,29 @@
 (def history
   (error-catching-handler
     (fn [{:keys [fluree/conn] {{:keys [ledger query] :as body} :body} :parameters}]
+      (log/debug "history handler got query:" query)
       (let [ledger* (->> ledger (fluree/load conn) deref!)
             query*  (-> query
-                        (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v))
-                                        {}))
+                        (->> (reduce-kv
+                               (fn [acc k v]
+                                 (let [v' (case k
+                                            "t" (reduce-kv
+                                                  (fn [t-acc t-k t-v]
+                                                    (assoc t-acc
+                                                      (keyword t-k)
+                                                      (case t-k
+                                                        ("at" "from" "to")
+                                                        (if (= t-v "latest")
+                                                          :latest
+                                                          t-v)
+                                                        t-v)))
+                                                  {} v)
+                                            v)]
+                                   (assoc acc (keyword k) v')))
+                               {}))
                         (assoc :opts (query-body->opts body)))]
         (log/debug "history - Querying ledger" ledger "-" query*)
-        {:status 200
-         :body   (deref! (fluree/history ledger* query*))}))))
+        (let [results (deref! (fluree/history ledger* query*))]
+          (log/debug "history - query results:" results)
+          {:status 200
+           :body results})))))
