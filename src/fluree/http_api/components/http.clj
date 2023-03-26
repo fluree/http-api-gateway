@@ -1,37 +1,64 @@
 (ns fluree.http-api.components.http
   (:require
     [donut.system :as ds]
-    [jsonista.core :as j]
     [ring.adapter.jetty9 :as http]
     [reitit.ring :as ring]
-    [reitit.coercion.spec]
+    [reitit.coercion.malli]
     [reitit.swagger :as swagger]
     [reitit.swagger-ui :as swagger-ui]
     [reitit.ring.coercion :as coercion]
-    [reitit.ring.middleware.muuntaja :as muuntaja]
+    [reitit.ring.middleware.muuntaja :as muuntaja-mw]
     [reitit.ring.middleware.exception :as exception]
     [fluree.http-api.handlers.ledger :as ledger]
-    [clojure.spec.alpha :as s]
-    [muuntaja.core :as m]
-    [muuntaja.format.json :as json-format]
-    [muuntaja.format.core :as mf]
+    [muuntaja.core :as muuntaja]
+    [muuntaja.format.core :as mfc]
+    [muuntaja.format.json :as mfj]
     [ring.middleware.cors :as rmc]
-    [fluree.db.util.log :as log])
-  (:import (java.io InputStream InputStreamReader)))
+    [fluree.db.json-ld.transact :as ftx]
+    [fluree.db.query.fql.syntax :as fql]
+    [fluree.db.query.history :as fqh]
+    [fluree.db.util.log :as log]
+    [fluree.db.util.validation :as v]
+    [malli.core :as m]
+    [malli.experimental.lite :as l]))
 
 (set! *warn-on-reflection* true)
 
-;; TODO: Flesh this out some more
-(s/def ::non-empty-string (s/and string? #(< 0 (count %))))
-(s/def ::address ::non-empty-string)
-(s/def ::id ::non-empty-string)
-(s/def ::t nat-int?)
-(s/def ::alias ::non-empty-string)
-(s/def ::action (s/or :keywords #{:new :insert}
-                      :strings #{"new" "insert"}))
-(s/def ::ledger ::non-empty-string)
-(s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
-(s/def ::context map?)
+(def LedgerAlias
+  (m/schema [:string {:min 1}]))
+
+(def LedgerAddress
+  (m/schema [:string {:min 1}]))
+
+(def Transaction
+  (m/schema ::ftx/txn {:registry ftx/registry}))
+
+(def Context
+  (m/schema ::v/context {:registry v/registry}))
+
+(def TValue
+  (m/schema pos-int?))
+
+(def DID
+  (m/schema [:string {:min 1}]))
+
+(def Query
+  (m/schema ::fql/analytical-query {:registry fql/registry}))
+
+(def QueryResponse
+  (m/schema ::fql/analytical-query-results {:registry fql/registry}))
+
+(def MultiQuery
+  (m/schema ::fql/multi-query {:registry fql/registry}))
+
+(def MultiQueryResponse
+  (m/schema ::fql/multi-query-results {:registry fql/registry}))
+
+(def HistoryQuery
+  (m/schema ::fqh/history-query {:registry fqh/registry}))
+
+(def HistoryQueryResponse
+  (m/schema ::fqh/history-query-results {:registry fqh/registry}))
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -48,29 +75,29 @@
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body sequential?}
-                400 {:body string?}
-                500 {:body string?}}
+   :parameters {:body {"ledger" LedgerAlias
+                       "query"  Query}}
+   :responses  {200 {:body QueryResponse}
+                400 {:body [:or :string :map]}
+                500 {:body [:or :string :map]}}
    :handler    ledger/query})
 
 (def multi-query-endpoint
   {:summary    "Endpoint for submitting multi-queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body map?}
-                400 {:body string?}
-                500 {:body string?}}
+   :parameters {:body {"ledger" LedgerAlias
+                       "query"  MultiQuery}}
+   :responses  {200 {:body MultiQueryResponse}
+                400 {:body [:or :string :map]}
+                500 {:body [:or :string :map]}}
    :handler    ledger/multi-query})
 
 (def history-endpoint
-  {:summary "Endpoint for submitting history queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body sequential?}
-                400 {:body string?}
-                500 {:body string?}}
+  {:summary    "Endpoint for submitting history queries"
+   :parameters {:body {"ledger" LedgerAlias
+                       "query"  HistoryQuery}}
+   :responses  {200 {:body HistoryQueryResponse}
+                400 {:body [:or :string :map]}
+                500 {:body [:or :string :map]}}
    :handler    ledger/history})
 
 (defn wrap-assoc-conn
@@ -97,33 +124,6 @@
   [weighted-middleware]
   (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
 
-(defn fluree-json-ld-decoder
-  [options]
-  (let [mapper (json-format/object-mapper! (assoc options
-                                             :decode-key-fn false))]
-    (reify
-      mf/Decode
-      (decode [_ data charset]
-        ;; TODO: Surely there's a way to use the existing upstream decoder w/o
-        ;;       reflection? I couldn't figure it out so the code is copy-pasted
-        ;;       in the next five lines below.
-        (let [decoded (if (.equals "utf-8" ^String charset)
-                        (j/read-value data mapper)
-                        (j/read-value (InputStreamReader. ^InputStream data
-                                                          ^String charset)
-                                      mapper))]
-          ;; keywordize only the top-level keys
-          (reduce-kv (fn [m k v]
-                       (assoc m (keyword k) v))
-                     {} decoded))))))
-
-(def fluree-json-ld-format
-  (mf/map->Format
-    {:name    "application/json"
-     :matches #"^application/(.+\+)?json$"
-     :encoder [json-format/encoder]
-     :decoder [fluree-json-ld-decoder]}))
-
 (defn websocket-handler
   [upgrade-request]
   ;; Mostly copy-pasta from
@@ -149,6 +149,18 @@
                     (tap> [:ws :error e]))
      :subprotocol (first provided-subprotocols)
      :extensions  provided-extensions}))
+
+(def json-format
+  (mfc/map->Format
+    {:name "application/json"
+     :decoder [mfj/decoder {:decode-key-fn false}]
+     :encoder [mfj/encoder]}))
+
+(defn muuntaja-instance
+  []
+  (muuntaja/create
+    (assoc-in muuntaja/default-options [:formats "application/json"]
+               json-format)))
 
 (defn debug-middleware
   "Put this in anywhere in your middleware chain to get some insight into what's
@@ -193,20 +205,27 @@
          ["/fluree" {:middleware fluree-middleware}
           ["/create"
            {:post {:summary    "Endpoint for creating new ledgers"
-                   :parameters {:body (s/keys :opt-un [::context]
-                                              :req-un [::ledger ::txn])}
-                   :responses  {201 {:body (s/keys :opt-un [::address ::id]
-                                                   :req-un [::alias ::t])}
-                                400 {:body string?}
-                                500 {:body string?}}
+                   :parameters {:body {"ledger"   LedgerAlias
+                                       "txn"      Transaction
+                                       "@context" (l/optional Context)}}
+                   :responses  {#_#_201 {:body {"alias"   LedgerAlias
+                                                "t"       TValue
+                                                "address" (l/optional LedgerAddress)
+                                                "id"      (l/optional DID)}}
+                                409 {:body [:or :string :map]}
+                                400 {:body [:or :string :map]}
+                                500 {:body [:or :string :map]}}
                    :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body (s/keys :req-un [::ledger ::txn])}
-                   :responses  {200 {:body (s/keys :opt-un [::address ::id]
-                                                   :req-un [::alias ::t])}
-                                400 {:body string?}
-                                500 {:body string?}}
+                   :parameters {:body {"ledger" LedgerAlias
+                                       "txn"    Transaction}}
+                   :responses  {200 {:body {"alias"   LedgerAlias
+                                            "t"       TValue
+                                            "address" (l/optional LedgerAddress)
+                                            "id"      (l/optional DID)}}
+                                400 {:body [:or :string :map]}
+                                500 {:body [:or :string :map]}}
                    :handler    ledger/transact}}]
           ["/query"
            {:get  query-endpoint
@@ -217,16 +236,12 @@
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]]]
-        {:data {:coercion   reitit.coercion.spec/coercion
-                :muuntaja   (m/create
-                              (assoc-in
-                                m/default-options
-                                [:formats "application/json"]
-                                fluree-json-ld-format))
+        {:data {:coercion   reitit.coercion.malli/coercion
+                :muuntaja   (muuntaja-instance)
                 :middleware [swagger/swagger-feature
-                             muuntaja/format-negotiate-middleware
-                             muuntaja/format-response-middleware
-                             muuntaja/format-request-middleware]}})
+                             muuntaja-mw/format-negotiate-middleware
+                             muuntaja-mw/format-response-middleware
+                             muuntaja-mw/format-request-middleware]}})
       (ring/routes
         (ring/ring-handler
           (ring/router

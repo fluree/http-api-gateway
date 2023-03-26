@@ -2,20 +2,20 @@
                                       #profile {:dev    58090
                                                 :prod   8090
                                                 :docker 8090}]}
- :fluree/connection {:method       #or [#env FLUREE_STORAGE_METHOD
-                                        #profile {:dev    :file
-                                                  :prod   :ipfs
-                                                  :docker :file}]
-                     :parallelism  #or [#env FLUREE_CONN_PARALLELISM
-                                        #profile {:dev    1
-                                                  :prod   4
-                                                  :docker 4}]
-                     :storage-path #or [#env FLUREE_STORAGE_PATH
-                                        #profile {:dev    "data"
-                                                  :docker "data"}]
-                     :defaults     {:context
-                                    #or [#env FLUREE_DEFAULT_CONTEXT
-                                         #profile {:dev
-                                                   {:id   "@id"
-                                                    :type "@type"
-                                                    :ex   "http://example.com/"}}]}}}
+ :fluree/connection {"method"       #or [#env FLUREE_STORAGE_METHOD
+                                         #profile {:dev    "file"
+                                                   :prod   "ipfs"
+                                                   :docker "file"}]
+                     "parallelism"  #or [#env FLUREE_CONN_PARALLELISM
+                                         #profile {:dev    1
+                                                   :prod   4
+                                                   :docker 4}]
+                     "storage-path" #or [#env FLUREE_STORAGE_PATH
+                                         #profile {:dev    "data"
+                                                   :docker "data"}]
+                     "defaults"     {"@context"
+                                     #or [#env FLUREE_DEFAULT_CONTEXT
+                                          #profile {:dev
+                                                    {"id"   "@id"
+                                                     "type" "@type"
+                                                     "ex"   "http://example.com/"}}]}}}
