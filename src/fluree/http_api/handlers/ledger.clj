@@ -152,9 +152,11 @@
   ([q kws]
    (reduce-kv
      (fn [q k v]
-       (let [k* (if (kws k) (keyword k) k)
-             v* (case k
-                  "t" (keywordize-history-query v #{"at" "from" "to"})
+       (let [k* (if (kws k)
+                  (keyword k)
+                  k)
+             v* (if (= "t" k)
+                  (keywordize-history-query v #{"at" "from" "to"})
                   v)]
          (assoc q k* v*)))
      {}
