@@ -11,7 +11,7 @@
          metosin/spec-tools             {:mvn/version "0.10.5"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :sha     "8775f13efae89735defbc5bb9eb8378c19075b43"}}
+                                         :sha     "14a22cd27ec473c9ab86dd8bf26619cb6319fc94"}}
 
  :aliases
  {:dev

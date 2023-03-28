@@ -134,14 +134,44 @@
         :body   (deref! (fluree/multi-query db query*))}))))
 
 
+(defn keywordize-history-query
+  "Keywordize the specific history query tree keys. Produces a query with string keys
+  transformed into keyword keys in this specific structure:
+
+  :ledger
+  :query
+    :history
+    :commit-details
+    :t
+      :from
+      :to
+      :at
+  "
+  ([q]
+   (keywordize-history-query q #{"commit-details" "t" "history"}))
+  ([q kws]
+   (reduce-kv
+     (fn [q k v]
+       (let [k* (if (kws k)
+                  (keyword k)
+                  k)
+             v* (if (= "t" k)
+                  (keywordize-history-query v #{"at" "from" "to"})
+                  v)]
+         (assoc q k* v*)))
+     {}
+     q)))
+
 (def history
   (error-catching-handler
     (fn [{:keys [fluree/conn] {{:keys [ledger query] :as body} :body} :parameters}]
+      (log/debug "history handler got query:" query)
       (let [ledger* (->> ledger (fluree/load conn) deref!)
             query*  (-> query
-                        (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v))
-                                        {}))
+                        keywordize-history-query
                         (assoc :opts (query-body->opts body)))]
         (log/debug "history - Querying ledger" ledger "-" query*)
-        {:status 200
-         :body   (deref! (fluree/history ledger* query*))}))))
+        (let [results (deref! (fluree/history ledger* query*))]
+          (log/debug "history - query results:" results)
+          {:status 200
+           :body results})))))
