@@ -13,21 +13,19 @@
 
 (def base-system
   {::ds/defs
-   {:env
-    {:http/server {}}
-    :fluree
-    {:conn fluree/conn}
-    :http
-    {:server  http/server
-     :handler #::ds{:start  (fn [{{:keys [:fluree/connection] :as cfg
-                                   {:keys [routes middleware]} :http}
-                                  ::ds/config}]
-                              (log/debug "ds/config:" cfg)
-                              (http/app {:fluree/conn     connection
-                                         :http/routes     routes
-                                         :http/middleware middleware}))
-                    :config {:http              (ds/ref [:env :http/server])
-                             :fluree/connection (ds/ref [:fluree :conn])}}}}})
+   {:env    {:http/server {}}
+    :fluree {:conn fluree/conn}
+    :http   {:server  http/server
+             :handler #::ds{:start  (fn [{{:keys [:fluree/connection :fluree/consensus] :as cfg {:keys [routes middleware tx-handler create-handler]} :http} ::ds/config}]
+                                      (log/debug "ds/config:" cfg)
+                                      (http/app {:fluree/conn         connection
+                                                 :fluree/consensus    consensus
+                                                 :http/routes         routes
+                                                 :http/middleware     middleware
+                                                 :http/tx-handler     tx-handler
+                                                 :http/create-handler create-handler}))
+                            :config {:http              (ds/ref [:env :http/server])
+                                     :fluree/connection (ds/ref [:fluree :conn])}}}}})
 
 (defmethod ds/named-system :base
   [_]

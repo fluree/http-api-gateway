@@ -163,7 +163,7 @@
         resp))))
 
 (defn app
-  [{:keys [:fluree/conn :http/middleware :http/routes]}]
+  [{:keys [:fluree/conn :fluree/consensus :http/middleware :http/routes :http/tx-handler :http/create-handler] :as cfg}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [default-fluree-middleware [[10 wrap-cors]
@@ -199,7 +199,9 @@
                                                    :req-un [::alias ::t])}
                                 400 {:body string?}
                                 500 {:body string?}}
-                   :handler    ledger/create}}]
+                   :handler    (if create-handler
+                                 (create-handler cfg)
+                                 ledger/create)}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body (s/keys :req-un [::ledger ::txn])}
@@ -207,7 +209,9 @@
                                                    :req-un [::alias ::t])}
                                 400 {:body string?}
                                 500 {:body string?}}
-                   :handler    ledger/transact}}]
+                   :handler    (if tx-handler
+                                 (tx-handler cfg)
+                                 ledger/transact)}}]
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
