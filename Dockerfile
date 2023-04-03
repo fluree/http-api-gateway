@@ -5,12 +5,11 @@ WORKDIR /usr/src/fluree-http-api-gateway
 
 COPY deps.edn ./
 
-RUN clojure -P && clojure -A:build -P
+RUN clojure -P && clojure -A:build:test -P
 
 COPY . ./
 
 RUN clojure -T:build uber
-RUN ls -la target
 
 FROM eclipse-temurin:17-jre-jammy AS runner
 

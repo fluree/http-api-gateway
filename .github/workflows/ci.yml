@@ -18,6 +18,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: fluree/http-api-gateway
+          target: builder
           load: true
 
   test:
@@ -33,6 +34,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: fluree/http-api-gateway
+          target: builder
           load: true
       - name: Run tests
         run: docker run fluree/http-api-gateway clojure -X:test
