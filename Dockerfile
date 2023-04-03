@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM clojure:temurin-17-tools-deps-1.11.1.1208-bullseye-slim AS builder
+FROM --platform=$BUILDPLATFORM clojure:temurin-17-tools-deps-1.11.1.1257-bullseye-slim AS builder
 
 RUN mkdir -p /usr/src/fluree-http-api-gateway
 WORKDIR /usr/src/fluree-http-api-gateway
