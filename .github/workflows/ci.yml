@@ -1,0 +1,54 @@
+name: CI
+on:
+  push:
+  schedule:
+    - cron: 13 21 * * *
+
+jobs:
+  docker-build-cache:
+    name: docker build cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v2.5.0
+        with:
+          install: true
+      - uses: docker/build-push-action@v4
+        id: build
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: fluree/http-api-gateway
+          load: true
+
+  test:
+    name: run tests
+    needs: docker-build-cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v2.5.0
+        with:
+          install: true
+      - uses: docker/build-push-action@v4
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: fluree/http-api-gateway
+          load: true
+      - name: Run tests
+        run: docker run fluree/http-api-gateway clojure -X:test
+
+  notifications:
+    name: send notifications
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name:
+        if: github.ref == 'refs/heads/main' && failure()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v2
+        with:
+          channel: development
+          status: FAILED
+          color: danger
