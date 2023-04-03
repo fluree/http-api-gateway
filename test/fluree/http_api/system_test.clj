@@ -62,25 +62,26 @@
       (get-in res [:body :alias])
       (throw (ex-info "Error creating random ledger" res)))))
 
-(deftest ^:integration create-endpoint-test
+(deftest ^:integration ^:json create-endpoint-json-test
   (testing "can create a new ledger w/ JSON"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {:ledger  ledger-name
-                         :context {:foo "http://foobar.com/"}
-                         :txn     [{:id      :ex/create-test
-                                    :type    :foo/test
-                                    :ex/name "create-endpoint-test"}]})
+                       {"ledger"  ledger-name
+                        "context" {"foo" "http://foobar.com/"}
+                        "txn"     [{"id"      "ex:create-test"
+                                    "type"    "foo:test"
+                                    "ex:name" "create-endpoint-test"}]})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res         (post :create {:body req :headers headers})]
       (is (= 201 (:status res)))
-      (is (= {:address address
-              :alias   ledger-name
-              :t       1}
-             (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
+      (is (= {"address" address
+              "alias"   ledger-name
+              "t"       1}
+             (-> res :body json/read-value))))))
 
+(deftest ^:integration ^:edn create-endpoint-edn-test
   (testing "can create a new ledger w/ EDN"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
@@ -112,30 +113,31 @@
           res-fail    (post :create {:body req :headers headers})]
       (is (= 409 (:status res-fail))))))
 
-(deftest ^:integration transaction-test
+(deftest ^:integration ^:json transaction-json-test
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {:ledger ledger-name
-                         :txn    {:id      :ex/transaction-test
-                                  :type    :schema/Test
-                                  :ex/name "transact-endpoint-json-test"}})
+                       {"ledger" ledger-name
+                        "txn"    {"id"      "ex:transaction-test"
+                                  "type"    "schema:Test"
+                                  "ex:name" "transact-endpoint-json-test"}})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res         (post :transact {:body req :headers headers})]
       (is (= 200 (:status res)))
-      (is (= {:address address, :alias ledger-name, :t 2}
-             (-> res :body (json/read-value json/keyword-keys-object-mapper))))))
+      (is (= {"address" address, "alias" ledger-name, "t" 2}
+             (-> res :body json/read-value))))))
 
+(deftest ^:integration ^:edn transaction-edn-test
   (testing "can transact in EDN"
     (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (pr-str
-                        {:ledger ledger-name
-                         :txn    [{:id      :ex/transaction-test
-                                   :type    :schema/Test
-                                   :ex/name "transact-endpoint-edn-test"}]})
+                       {:ledger ledger-name
+                        :txn    [{:id      :ex/transaction-test
+                                  :type    :schema/Test
+                                  :ex/name "transact-endpoint-edn-test"}]})
           headers     {"Content-Type" "application/edn"
                        "Accept"       "application/edn"}
           res         (post :transact {:body req :headers headers})]
@@ -143,8 +145,35 @@
       (is (= {:address address, :alias ledger-name, :t 2}
              (-> res :body edn/read-string))))))
 
-(deftest ^:integration query-test
-  (testing "can query a basic entity"
+(deftest ^:integration ^:json query-json-test
+  (testing "can query a basic entity w/ JSON"
+    (let [ledger-name  (create-rand-ledger "query-endpoint-basic-entity-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "txn"    [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query-req    {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "query"  {"select" '{?t ["*"]}
+                                    "where"  '[[?t "type" "schema:Test"]]}})
+                        :headers json-headers}
+          query-res    (post :query query-req)]
+      (is (= 200 (:status query-res)))
+      (is (= [{"id"       "ex:query-test"
+               "rdf:type" ["schema:Test"]
+               "ex:name"  "query-test"}]
+             (-> query-res :body json/read-value))))))
+
+(deftest ^:integration ^:edn query-edn-test
+  (testing "can query a basic entity w/ EDN"
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           edn-headers {"Content-Type" "application/edn"
                        "Accept"       "application/edn"}
@@ -168,25 +197,25 @@
                :ex/name  "query-test"}]
              (-> query-res :body edn/read-string))))))
 
-(deftest ^:integration history-query-test
+(deftest ^:integration ^:json history-query-json-test
   (testing "basic JSON history query works"
     (let [ledger-name  (create-rand-ledger "history-query-basic-test")
           json-headers {"Content-Type" "application/json"
                         "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
-                          {:ledger ledger-name
-                           :txn    [{"id"      "ex:query-test"
-                                     "type"    "schema:Test"
-                                     "ex:name" "query-test"}]})
+                         {:ledger ledger-name
+                          :txn    [{"id"      "ex:query-test"
+                                    "type"    "schema:Test"
+                                    "ex:name" "query-test"}]})
                         :headers json-headers}
           txn-res      (post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           query-req    {:body
                         (json/write-value-as-string
-                          {:ledger ledger-name
-                           :query {:commit-details true
-                                   :t {:at :latest}}})
+                         {:ledger ledger-name
+                          :query  {:commit-details true
+                                   :t              {:at :latest}}})
                         :headers json-headers}
           query-res    (post :history query-req)]
       (is (= 200 (:status query-res))
@@ -194,8 +223,40 @@
       (is (= [{"f:commit"
                {"f:data"
                 {"f:assert"
-                 [{"ex:name" "query-test"
-                   "id" "ex:query-test"
+                 [{"ex:name"  "query-test"
+                   "id"       "ex:query-test"
                    "rdf:type" ["schema:Test"]}]
                  "f:retract" []}}}]
              (-> query-res :body json/read-value))))))
+
+(deftest ^:integration ^:edn history-query-edn-test
+  (testing "basic EDN history query works"
+    (let [ledger-name (create-rand-ledger "history-query-basic-test")
+          edn-headers {"Content-Type" "application/edn"
+                       "Accept"       "application/edn"}
+          txn-req     {:body
+                       (pr-str
+                        {:ledger ledger-name
+                         :txn    [{:id      :ex/query-test
+                                   :type    :schema/Test
+                                   :ex/name "query-test"}]})
+                       :headers edn-headers}
+          txn-res     (post :transact txn-req)
+          _           (assert (= 200 (:status txn-res)))
+          query-req   {:body
+                       (pr-str
+                        {:ledger ledger-name
+                         :query  {:commit-details true
+                                  :t              {:at :latest}}})
+                       :headers edn-headers}
+          query-res   (post :history query-req)]
+      (is (= 200 (:status query-res))
+          (str "History query response was: " (pr-str query-res)))
+      (is (= [{:f/commit
+               {:f/data
+                {:f/assert
+                 [{:ex/name  "query-test"
+                   :id       :ex/query-test
+                   :rdf/type [:schema/Test]}]
+                 :f/retract []}}}]
+             (-> query-res :body edn/read-string))))))

@@ -1,16 +1,15 @@
-FROM --platform=$BUILDPLATFORM clojure:temurin-17-tools-deps-1.11.1.1208-bullseye-slim AS builder
+FROM --platform=$BUILDPLATFORM clojure:temurin-17-tools-deps-1.11.1.1257-bullseye-slim AS builder
 
 RUN mkdir -p /usr/src/fluree-http-api-gateway
 WORKDIR /usr/src/fluree-http-api-gateway
 
 COPY deps.edn ./
 
-RUN clojure -P && clojure -A:build -P
+RUN clojure -P && clojure -A:build:test -P
 
 COPY . ./
 
 RUN clojure -T:build uber
-RUN ls -la target
 
 FROM eclipse-temurin:17-jre-jammy AS runner
 

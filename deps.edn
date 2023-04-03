@@ -3,31 +3,31 @@
          org.clojure/core.async         {:mvn/version "1.6.673"}
          club.donutpower/system         {:mvn/version "0.0.165"}
          aero/aero                      {:mvn/version "1.1.6"}
-         info.sunng/ring-jetty9-adapter {:mvn/version "0.18.1"}
-         ch.qos.logback/logback-classic {:mvn/version "1.4.5"}
-         org.slf4j/slf4j-api            {:mvn/version "2.0.5"}
-         metosin/reitit                 {:mvn/version "0.5.18"}
+         info.sunng/ring-jetty9-adapter {:mvn/version "0.19.0"}
+         ch.qos.logback/logback-classic {:mvn/version "1.4.6"}
+         org.slf4j/slf4j-api            {:mvn/version "2.0.7"}
+         metosin/reitit                 {:mvn/version "0.6.0"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
          metosin/spec-tools             {:mvn/version "0.10.5"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :sha     "14a22cd27ec473c9ab86dd8bf26619cb6319fc94"}}
+                                         :sha     "dabce6c2afa45e55118a32a157edd5ae53694367"}}
 
  :aliases
  {:dev
   {:extra-paths ["dev/src" "test"]
-   :extra-deps  {com.nextjournal/beholder    {:mvn/version "1.0.0"}
-                 org.clojure/tools.namespace {:mvn/version "1.1.0"}
+   :extra-deps  {com.nextjournal/beholder    {:mvn/version "1.0.2"}
+                 org.clojure/tools.namespace {:mvn/version "1.4.4"}
                  ring/ring-mock              {:mvn/version "0.4.0"}}}
 
   :build
   {:deps       {io.github.seancorfield/build-clj
-                {:git/tag "v0.8.5" :git/sha "de693d0"}}
+                {:git/tag "v0.9.2" :git/sha "9c9f078"}}
    :ns-default build}
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.77.1236"}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.82.1306"}
                  clj-http/clj-http   {:mvn/version "3.12.3"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {}}
