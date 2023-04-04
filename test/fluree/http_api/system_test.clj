@@ -247,7 +247,7 @@
                        (pr-str
                         {:ledger ledger-name
                          :query  {:commit-details true
-                                  :t              {:at :latest}}})
+                                  :t              {:at "latest"}}})
                        :headers edn-headers}
           query-res   (post :history query-req)]
       (is (= 200 (:status query-res))
