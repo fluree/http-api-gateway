@@ -31,7 +31,7 @@
                       :strings #{"new" "insert"}))
 (s/def ::ledger ::non-empty-string)
 (s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
-(s/def ::context map?)
+(s/def ::defaultContext any?)
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -193,7 +193,7 @@
          ["/fluree" {:middleware fluree-middleware}
           ["/create"
            {:post {:summary    "Endpoint for creating new ledgers"
-                   :parameters {:body (s/keys :opt-un [::context]
+                   :parameters {:body (s/keys :opt-un [::defaultContext]
                                               :req-un [::ledger ::txn])}
                    :responses  {201 {:body (s/keys :opt-un [::address ::id]
                                                    :req-un [::alias ::t])}

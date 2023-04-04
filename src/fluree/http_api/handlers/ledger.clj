@@ -41,14 +41,14 @@
                                     :body   {:error (ex-message t)}}}))))))
 
 (defn txn-body->opts
-  [{:keys [context txn] :as _body}]
+  [{:keys [defaultContext txn] :as _body}]
   (let [first-txn (if (map? txn)
                     txn
                     (first txn))]
     (cond-> {}
             (-> first-txn keys first keyword?) (assoc :context-type :keyword)
             (-> first-txn keys first string?) (assoc :context-type :string)
-            context (assoc :context context))))
+            defaultContext (assoc :defaultContext defaultContext))))
 
 (defn query-body->opts
   [{:keys [query] :as _body}]
@@ -76,7 +76,6 @@
             (let [opts    (txn-body->opts body)
                   _       (log/debug "create opts:" opts)
                   ledger* (deref! (fluree/create conn ledger opts))
-                  address (:address ledger*)
                   db      (-> ledger*
                               fluree/db
                               (fluree/stage txn opts)
@@ -96,7 +95,6 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            address (:address ledger)
             opts    (txn-body->opts body)
             ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
             db      (-> ledger
