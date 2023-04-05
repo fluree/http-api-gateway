@@ -32,6 +32,7 @@
 (s/def ::ledger ::non-empty-string)
 (s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
 (s/def ::defaultContext any?)
+(s/def ::opts map?)
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -202,7 +203,8 @@
                    :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body (s/keys :req-un [::ledger ::txn])}
+                   :parameters {:body (s/keys :req-un [::ledger ::txn]
+                                              :opt-un [::opts])}
                    :responses  {200 {:body (s/keys :opt-un [::address ::id]
                                                    :req-un [::alias ::t])}
                                 400 {:body string?}

@@ -12,6 +12,11 @@
                (assoc m* (keyword k) v))
              {} m))
 
+(defn transform-policy-opts
+  [opts]
+  (let [{:strs [role did] :as policy-opts} opts]
+    (keywordize-keys policy-opts)))
+
 (defn deref!
   "Derefs promise p and throws if the result is an exception, returns it otherwise."
   [p]
@@ -41,20 +46,22 @@
                                     :body   {:error (ex-message t)}}}))))))
 
 (defn txn-body->opts
-  [{:keys [defaultContext txn] :as _body}]
+  [{:keys [defaultContext txn opts] :as _body}]
   (let [first-txn (if (map? txn)
                     txn
-                    (first txn))]
-    (cond-> {}
+                    (first txn))
+        policy-opts (transform-policy-opts opts)]
+    (cond-> policy-opts
             (-> first-txn keys first keyword?) (assoc :context-type :keyword)
             (-> first-txn keys first string?) (assoc :context-type :string)
             defaultContext (assoc :defaultContext defaultContext))))
 
 (defn query-body->opts
   [{:keys [query] :as _body}]
-  (cond-> {}
-          (-> query keys first keyword?) (assoc :context-type :keyword)
-          (-> query keys first string?) (assoc :context-type :string)))
+  (let [policy-opts (transform-policy-opts (get query "opts"))]
+    (cond-> policy-opts
+      (-> query keys first keyword?) (assoc :context-type :keyword)
+      (-> query keys first string?) (assoc :context-type :string))))
 
 (defn ledger-summary
   [db]
