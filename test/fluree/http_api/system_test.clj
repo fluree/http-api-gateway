@@ -49,11 +49,11 @@
 (defn create-rand-ledger
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
-        req         (pr-str {:ledger  ledger-name
-                             :context {:foo "http://foobar.com/"}
-                             :txn     [{:id      :ex/create-test
-                                        :type    :foo/test
-                                        :ex/name "create-endpoint-test"}]})
+        req         (pr-str {:ledger         ledger-name
+                             :defaultContext ["" {:foo "http://foobar.com/"}]
+                             :txn            [{:id      :ex/create-test
+                                               :type    :foo/test
+                                               :ex/name "create-endpoint-test"}]})
         headers     {"Content-Type" "application/edn"
                      "Accept"       "application/edn"}
         res         (update (post :create {:body req :headers headers})
@@ -67,11 +67,11 @@
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                       {"ledger"  ledger-name
-                        "context" {"foo" "http://foobar.com/"}
-                        "txn"     [{"id"      "ex:create-test"
-                                    "type"    "foo:test"
-                                    "ex:name" "create-endpoint-test"}]})
+                       {"ledger"         ledger-name
+                        "defaultContext" ["" {"foo" "http://foobar.com/"}]
+                        "txn"            [{"id"      "ex:create-test"
+                                           "type"    "foo:test"
+                                           "ex:name" "create-endpoint-test"}]})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res         (post :create {:body req :headers headers})]
@@ -85,11 +85,11 @@
   (testing "can create a new ledger w/ EDN"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
-          req         (pr-str {:ledger  ledger-name
-                               :context {:foo "http://foobar.com/"}
-                               :txn     [{:id      :ex/create-test
-                                          :type    :foo/test
-                                          :ex/name "create-endpoint-test"}]})
+          req         (pr-str {:ledger         ledger-name
+                               :defaultContext ["" {:foo "http://foobar.com/"}]
+                               :txn            [{:id      :ex/create-test
+                                                 :type    :foo/test
+                                                 :ex/name "create-endpoint-test"}]})
           headers     {"Content-Type" "application/edn"
                        "Accept"       "application/edn"}
           res         (post :create {:body req :headers headers})]
@@ -101,11 +101,11 @@
 
   (testing "responds with 409 error if ledger already exists"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
-          req         (pr-str {:ledger  ledger-name
-                               :context {:foo "http://foobar.com/"}
-                               :txn     [{:id      :ex/create-test
-                                          :type    :foo/test
-                                          :ex/name "create-endpoint-test"}]})
+          req         (pr-str {:ledger         ledger-name
+                               :defaultContext ["" {:foo "http://foobar.com/"}]
+                               :txn            [{:id      :ex/create-test
+                                                 :type    :foo/test
+                                                 :ex/name "create-endpoint-test"}]})
           headers     {"Content-Type" "application/edn"
                        "Accept"       "application/edn"}
           res-success (post :create {:body req :headers headers})
@@ -247,7 +247,7 @@
                        (pr-str
                         {:ledger ledger-name
                          :query  {:commit-details true
-                                  :t              {:at :latest}}})
+                                  :t              {:at "latest"}}})
                        :headers edn-headers}
           query-res   (post :history query-req)]
       (is (= 200 (:status query-res))

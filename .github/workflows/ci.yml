@@ -37,8 +37,7 @@ jobs:
           target: builder
           load: true
       - name: Run tests
-        #run: docker run fluree/http-api-gateway clojure -X:test
-        run: 'docker run fluree/http-api-gateway clojure -X:test :kaocha.filter/focus-meta [:json]'
+        run: docker run fluree/http-api-gateway clojure -X:test
 
   notifications:
     name: send notifications
