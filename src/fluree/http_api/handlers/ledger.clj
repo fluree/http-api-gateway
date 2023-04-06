@@ -14,8 +14,9 @@
 
 (defn transform-policy-opts
   [opts]
-  (let [{:strs [role did] :as policy-opts} opts]
-    (keywordize-keys policy-opts)))
+  (or (not-empty (select-keys opts [:role :did]))
+      (let [{:strs [role did] :as policy-opts} opts]
+        (keywordize-keys policy-opts))))
 
 (defn deref!
   "Derefs promise p and throws if the result is an exception, returns it otherwise."
@@ -58,7 +59,8 @@
 
 (defn query-body->opts
   [{:keys [query] :as _body}]
-  (let [policy-opts (transform-policy-opts (get query "opts"))]
+  (let [policy-opts (transform-policy-opts (or (get query "opts")
+                                               (get query :opts)))]
     (cond-> policy-opts
       (-> query keys first keyword?) (assoc :context-type :keyword)
       (-> query keys first string?) (assoc :context-type :string))))
