@@ -33,6 +33,9 @@
 (def Transaction
   (m/schema ::ftx/txn {:registry ftx/registry}))
 
+(def TransactOpts
+  (m/schema ::ftx/opts {:registry ftx/registry}))
+
 (def Context
   (m/schema ::v/context {:registry v/registry}))
 
