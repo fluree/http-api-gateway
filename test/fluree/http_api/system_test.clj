@@ -53,9 +53,9 @@
         req         (json/write-value-as-string
                      {"ledger"   ledger-name
                       "defaults" {"@context" ["" {"foo" "http://foobar.com/"}]}
-                      "txn"      [{"id"      "ex:create-test"
-                                   "type"    "foo:test"
-                                   "ex:name" "create-endpoint-test"}]})
+                      "txn"      [{"id"       "foo:create-test"
+                                   "type"     "foo:test"
+                                   "foo:name" "create-endpoint-test"}]})
         headers     {"Content-Type" "application/json"
                      "Accept"       "application/json"}
         res         (update (post :create {:body req :headers headers})
