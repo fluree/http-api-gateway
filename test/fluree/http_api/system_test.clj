@@ -89,25 +89,25 @@
           req         (json/write-value-as-string
                        {"ledger"   ledger-name
                         "defaults" {"@context" ["" {"foo" "http://foobar.com/"}]}
-                        "txn" [{"id"      "ex:create-test"
-                                "type"    "foo:test"
-                                "ex:name" "create-endpoint-test"}]})
+                        "txn"      [{"id"      "ex:create-test"
+                                     "type"    "foo:test"
+                                     "ex:name" "create-endpoint-test"}]})
           headers     {"Content-Type" "application/json"
                        "Accept"       "application/json"}
           res-success (post :create {:body req :headers headers})
-          _ (assert (= 201 (:status res-success)))
-          res-fail (post :create {:body req :headers headers})]
+          _           (assert (= 201 (:status res-success)))
+          res-fail    (post :create {:body req :headers headers})]
       (is (= 409 (:status res-fail))))))
 
 (deftest ^:integration ^:edn create-endpoint-edn-test
   (testing "can create a new ledger w/ EDN"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
-          req         (pr-str {:ledger  ledger-name
+          req         (pr-str {:ledger   ledger-name
                                :defaults {:context {:foo "http://foobar.com/"}}
-                               :txn [{:id      :ex/create-test
-                                      :type    :foo/test
-                                      :ex/name "create-endpoint-test"}]})
+                               :txn      [{:id      :ex/create-test
+                                           :type    :foo/test
+                                           :ex/name "create-endpoint-test"}]})
           headers     {"Content-Type" "application/edn"
                        "Accept"       "application/edn"}
           res         (post :create {:body req :headers headers})]
@@ -174,6 +174,35 @@
       (is (= [{"id"       "ex:query-test"
                "rdf:type" ["schema:Test"]
                "ex:name"  "query-test"}]
+             (-> query-res :body json/read-value)))))
+
+  (testing "union query works"
+    (let [ledger-name  (create-rand-ledger "query-endpoint-union-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "txn"    [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}
+                                    {"id"       "ex:wes"
+                                     "type"     "schema:Person"
+                                     "ex:fname" "Wes"}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query-req    {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "query"  '{"select" ?n
+                                     "where"  [{"union"
+                                                [[[?s "ex:name" ?n]]
+                                                 [[?s "ex:fname" ?n]]]}]}})
+                        :headers json-headers}
+          query-res    (post :query query-req)]
+      (is (= 200 (:status query-res)))
+      (is (= ["query-test" "Wes"]
              (-> query-res :body json/read-value))))))
 
 (deftest ^:integration ^:edn query-edn-test
@@ -280,7 +309,8 @@
                "f:retract" []}]
              (-> query-res :body json/read-value)))))
 
-  ;; TODO: Make this pass
+  ;; TODO: Get the right expectations in here & make this pass
+  ;;       Needs https://github.com/fluree/db/issues/451 fixed
   #_(testing "commit-details JSON history query works"
       (let [ledger-name  (create-rand-ledger "history-query-basic-test")
             json-headers {"Content-Type" "application/json"
