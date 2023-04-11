@@ -64,7 +64,7 @@
 
 (def transact
   (error-catching-handler
-    (fn [{:keys [fluree/conn] {{:strs [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn] {{:strs [ledger txn opts]} :body} :parameters}]
       (println "\nTransacting to" ledger ":" (pr-str txn))
       (let [ledger  (if (deref! (fluree/exists? conn ledger))
                       (do
@@ -72,7 +72,6 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            opts    (select-keys body ["@context"])
             ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
             db      (-> ledger
                         fluree/db
@@ -98,7 +97,6 @@
        (log/debug "multi-query - Querying ledger" ledger "-" query)
        {:status 200
         :body   (deref! (fluree/multi-query db query))}))))
-
 
 (def history
   (error-catching-handler

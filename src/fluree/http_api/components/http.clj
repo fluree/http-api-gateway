@@ -1,26 +1,26 @@
 (ns fluree.http-api.components.http
   (:require
-    [donut.system :as ds]
-    [ring.adapter.jetty9 :as http]
-    [reitit.ring :as ring]
-    [reitit.coercion.malli]
-    [reitit.swagger :as swagger]
-    [reitit.swagger-ui :as swagger-ui]
-    [reitit.ring.coercion :as coercion]
-    [reitit.ring.middleware.muuntaja :as muuntaja-mw]
-    [reitit.ring.middleware.exception :as exception]
-    [fluree.http-api.handlers.ledger :as ledger]
-    [muuntaja.core :as muuntaja]
-    [muuntaja.format.core :as mfc]
-    [muuntaja.format.json :as mfj]
-    [ring.middleware.cors :as rmc]
-    [fluree.db.json-ld.transact :as ftx]
-    [fluree.db.query.fql.syntax :as fql]
-    [fluree.db.query.history :as fqh]
-    [fluree.db.util.log :as log]
-    [fluree.db.util.validation :as v]
-    [malli.core :as m]
-    [malli.experimental.lite :as l]))
+   [donut.system :as ds]
+   [ring.adapter.jetty9 :as http]
+   [reitit.ring :as ring]
+   [reitit.coercion.malli]
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]
+   [reitit.ring.coercion :as coercion]
+   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+   [reitit.ring.middleware.exception :as exception]
+   [fluree.http-api.handlers.ledger :as ledger]
+   [muuntaja.core :as muuntaja]
+   [muuntaja.format.core :as mfc]
+   [muuntaja.format.json :as mfj]
+   [ring.middleware.cors :as rmc]
+   [fluree.db.json-ld.transact :as ftx]
+   [fluree.db.query.fql.syntax :as fql]
+   [fluree.db.query.history :as fqh]
+   [fluree.db.util.log :as log]
+   [fluree.db.util.validation :as v]
+   [malli.core :as m]
+   [malli.experimental.lite :as l]))
 
 (set! *warn-on-reflection* true)
 
@@ -35,6 +35,9 @@
 
 (def Context
   (m/schema ::v/context {:registry v/registry}))
+
+(def Defaults
+  (m/schema [:map ["@context" Context]]))
 
 (def TValue
   (m/schema pos-int?))
@@ -207,11 +210,11 @@
            {:post {:summary    "Endpoint for creating new ledgers"
                    :parameters {:body {"ledger"   LedgerAlias
                                        "txn"      Transaction
-                                       "@context" (l/optional Context)}}
-                   :responses  {#_#_201 {:body {"alias"   LedgerAlias
-                                                "t"       TValue
-                                                "address" (l/optional LedgerAddress)
-                                                "id"      (l/optional DID)}}
+                                       "defaults" (l/optional Defaults)}}
+                   :responses  {201 {:body {"alias"   LedgerAlias
+                                            "t"       TValue
+                                            "address" (l/optional LedgerAddress)
+                                            "id"      (l/optional DID)}}
                                 409 {:body [:or :string :map]}
                                 400 {:body [:or :string :map]}
                                 500 {:body [:or :string :map]}}
@@ -219,7 +222,8 @@
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body {"ledger" LedgerAlias
-                                       "txn"    Transaction}}
+                                       "txn"    Transaction
+                                       "opts"   (l/optional TransactOpts)}}
                    :responses  {200 {:body {"alias"   LedgerAlias
                                             "t"       TValue
                                             "address" (l/optional LedgerAddress)
