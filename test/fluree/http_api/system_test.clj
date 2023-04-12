@@ -203,7 +203,109 @@
           query-res    (post :query query-req)]
       (is (= 200 (:status query-res)))
       (is (= ["query-test" "Wes"]
-             (-> query-res :body json/read-value))))))
+             (-> query-res :body json/read-value)))))
+
+  (testing "optional query works"
+    (let [ledger-name  (create-rand-ledger "query-endpoint-optional-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "txn"    [{"id"          "ex:brian",
+                                     "type"        "ex:User",
+                                     "schema:name" "Brian"
+                                     "ex:friend"   [{"id" "ex:alice"}]}
+                                    {"id"           "ex:alice",
+                                     "type"         "ex:User",
+                                     "ex:favColor"  "Green"
+                                     "schema:email" "alice@flur.ee"
+                                     "schema:name"  "Alice"}
+                                    {"id"           "ex:cam",
+                                     "type"         "ex:User",
+                                     "schema:name"  "Cam"
+                                     "schema:email" "cam@flur.ee"
+                                     "ex:friend"    [{"id" "ex:brian"}
+                                                     {"id" "ex:alice"}]}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query        {"ledger" ledger-name
+                        "query"  '{"select" [?name ?favColor]
+                                   "where"  [[?s "rdf:type" "ex:User"]
+                                             [?s "schema:name" ?name]
+                                             {"optional" [?s "ex:favColor" ?favColor]}]}}
+          query-req    {:body
+                        (json/write-value-as-string query)
+                        :headers json-headers}
+          query-res    (post :query query-req)]
+      (is (= 200 (:status query-res))
+          (str "Response was: " (pr-str query-res)))
+      (is (= [["Cam" nil]
+              ["Alice" "Green"]
+              ["Brian" nil]]
+             (-> query-res :body json/read-value))
+          (str "Response was: " (pr-str query-res)))))
+
+  (testing "filter query works"
+    (let [ledger-name  (create-rand-ledger "query-endpoint-filter-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "txn"    [{"id"           "ex:brian",
+                                     "type"         "ex:User",
+                                     "schema:name"  "Brian"
+                                     "ex:last"      "Smith"
+                                     "schema:email" "brian@example.org"
+                                     "schema:age"   50
+                                     "ex:favNums"   7}
+                                    {"id"           "ex:alice",
+                                     "type"         "ex:User",
+                                     "schema:name"  "Alice"
+                                     "ex:last"      "Smith"
+                                     "schema:email" "alice@example.org"
+                                     "ex:favColor"  "Green"
+                                     "schema:age"   42
+                                     "ex:favNums"   [42, 76, 9]}
+                                    {"id"           "ex:cam",
+                                     "type"         "ex:User",
+                                     "schema:name"  "Cam"
+                                     "ex:last"      "Jones"
+                                     "schema:email" "cam@example.org"
+                                     "schema:age"   34
+                                     "ex:favColor"  "Blue"
+                                     "ex:favNums"   [5, 10]
+                                     "ex:friend"    [{"id" "ex:brian"}
+                                                     {"id" "ex:alice"}]}
+                                    {"id"           "ex:david",
+                                     "type"         "ex:User",
+                                     "schema:name"  "David"
+                                     "ex:last"      "Jones"
+                                     "schema:email" "david@example.org"
+                                     "schema:age"   46
+                                     "ex:favNums"   [15 70]
+                                     "ex:friend"    [{"id" "ex:cam"}]}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query        {"select" ['?name '?last]
+                        "where"  [['?s "rdf:type" "ex:User"]
+                                  ['?s "schema:age" '?age]
+                                  ['?s "schema:name" '?name]
+                                  ['?s "ex:last" '?last]
+                                  {"filter" ["(> ?age 45)", "(strEnds ?last \"ith\")"]}]}
+          query-req    {:body    (json/write-value-as-string
+                                  {"ledger" ledger-name
+                                   "query" query})
+                        :headers json-headers}
+          query-res    (post :query query-req)]
+      (is (= 200 (:status query-res))
+          (str "Response was: " (pr-str query-res)))
+      (is (= [["Brian" "Smith"]]
+             (-> query-res :body json/read-value))
+          (str "Response was: " (pr-str query-res))))))
 
 (deftest ^:integration ^:edn query-edn-test
   (testing "can query a basic entity w/ EDN"
