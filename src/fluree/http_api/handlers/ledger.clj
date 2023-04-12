@@ -87,8 +87,10 @@
     (fn [{:keys [fluree/conn] {{:strs [ledger query]} :body} :parameters}]
       (let [db     (->> ledger (fluree/load conn) deref! fluree/db)]
         (log/debug "query - Querying ledger" ledger "-" query)
-        {:status 200
-         :body   (deref! (fluree/query db query))}))))
+        (let [results (deref! (fluree/query db query))]
+          (log/debug "query - Results:" results)
+          {:status 200
+           :body   results})))))
 
 (def multi-query
   (error-catching-handler
