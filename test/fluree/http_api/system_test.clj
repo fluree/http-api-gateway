@@ -262,7 +262,8 @@
                                          :where  '[[?t :type :schema/Test]]}})
                        :headers edn-headers}
           query-res   (post :query query-req)]
-      (is (= 200 (:status query-res)))
+      (is (= 200 (:status query-res))
+          (str "Query response was:" (pr-str query-res)))
       (is (= [{:id       :ex/query-test
                :rdf/type [:schema/Test]
                :ex/name  "query-test"}]
@@ -275,18 +276,18 @@
                         "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
-                         {:ledger ledger-name
-                          :txn    [{"id"      "ex:query-test"
-                                    "type"    "schema:Test"
-                                    "ex:name" "query-test"}]})
+                         {"ledger" ledger-name
+                          "txn"    [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}]})
                         :headers json-headers}
           txn-res      (post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           query-req    {:body
                         (json/write-value-as-string
-                         {:ledger ledger-name
-                          :query  {:commit-details true
-                                   :t              {:at :latest}}})
+                         {"ledger" ledger-name
+                          "query"  {"commit-details" true
+                                    "t"              {"at" "latest"}}})
                         :headers json-headers}
           query-res    (post :history query-req)]
       (is (= 200 (:status query-res))
@@ -332,8 +333,7 @@
                  :f/retract []}}}]
              (-> query-res :body edn/read-string))))))
 
-
-(deftest ^:integration ^:json policy-opts-test
+(deftest ^:integration ^:json policy-opts-json-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
           json-headers {"Content-Type" "application/json"
@@ -414,22 +414,22 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                        {:ledger ledger-name
-                         :txn    [{"id"        "ex:bob"
-                                   "ex:secret" "bob's new secret"}]
-                         :opts   {"role" "ex:userRole"
-                                  "did"  alice-did}})
+                        {"ledger" ledger-name
+                         "txn"    [{"id"        "ex:bob"
+                                    "ex:secret" "bob's new secret"}]
+                         "opts"   {"role" "ex:userRole"
+                                   "did"  alice-did}})
                        :headers json-headers}
               txn-res (post :transact txn-req)]
           (is (not= 200 (:status txn-res))
-              (str "transaction policy opts should have prevented modification, instead response was:" (pr-str txn-res)))
+              (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
           (let [query-req {:body
                            (json/write-value-as-string
-                            {:ledger ledger-name
-                             :query  {:history "ex:bob"
-                                      :t       {:from 1}
-                                      :opts    {"role" "ex:userRole"
-                                                "did"  alice-did}}})
+                            {"ledger" ledger-name
+                             "query"  {"history" "ex:bob"
+                                       "t"       {"from" 1}
+                                       "opts"    {"role" "ex:userRole"
+                                                  "did"  alice-did}}})
                            :headers json-headers}
                 query-res (post :history query-req)]
             (is (= 200 (:status query-res))
@@ -438,8 +438,7 @@
                    (-> query-res :body json/read-value first (get "f:assert")))
                 "policy opts should have prevented seeing bob's secret")))))))
 
-
-(deftest ^:integration ^:edn policy-opts-test
+(deftest ^:integration ^:edn policy-opts-edn-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
           edn-headers  {"Content-Type" "application/edn"
