@@ -1,22 +1,10 @@
 (ns fluree.http-api.handlers.ledger
   (:require
-    [fluree.db.json-ld.api :as fluree]
-    [fluree.db.util.core :as util]
-    [fluree.db.util.log :as log])
+   [clojure.string :as str]
+   [fluree.db.json-ld.api :as fluree]
+   [fluree.db.util.core :as util]
+   [fluree.db.util.log :as log])
   (:import (clojure.lang ExceptionInfo)))
-
-(defn keywordize-keys
-  "Transforms all top-level map keys to keywords."
-  [m]
-  (reduce-kv (fn [m* k v]
-               (assoc m* (keyword k) v))
-             {} m))
-
-(defn transform-policy-opts
-  [opts]
-  (or (not-empty (select-keys opts [:role :did]))
-      (let [{:strs [role did] :as policy-opts} opts]
-        (keywordize-keys policy-opts))))
 
 (defn deref!
   "Derefs promise p and throws if the result is an exception, returns it otherwise."
@@ -46,24 +34,28 @@
                         {:response {:status 500
                                     :body   {:error (ex-message t)}}}))))))
 
+(defn header->content-type
+  [ct-header]
+  (if (re-matches #"application/(?:[^\+]+\+)?json(?:;.+)?" ct-header)
+    :json
+    (-> ct-header (str/split #"/") last keyword)))
+
+(defn content-type->context-type
+  [ct]
+  (if (= :json ct) :string :keyword))
+
 (defn txn-body->opts
-  [{:keys [defaultContext txn opts] :as _body}]
-  (let [first-txn (if (map? txn)
-                    txn
-                    (first txn))
-        policy-opts (transform-policy-opts opts)]
-    (cond-> policy-opts
-            (-> first-txn keys first keyword?) (assoc :context-type :keyword)
-            (-> first-txn keys first string?) (assoc :context-type :string)
+  [{:keys [defaultContext opts] :as _body} content-type]
+  (let [content-type* (header->content-type content-type)]
+    (cond-> opts
+            true (assoc :context-type (content-type->context-type content-type*))
             defaultContext (assoc :defaultContext defaultContext))))
 
 (defn query-body->opts
-  [{:keys [query] :as _body}]
-  (let [policy-opts (transform-policy-opts (or (get query "opts")
-                                               (get query :opts)))]
-    (cond-> policy-opts
-      (-> query keys first keyword?) (assoc :context-type :keyword)
-      (-> query keys first string?) (assoc :context-type :string))))
+  [{:keys [query] :as _body} content-type]
+  (let [opts (:opts query)
+        content-type* (header->content-type content-type)]
+    (assoc opts :context-type (content-type->context-type content-type*))))
 
 (defn ledger-summary
   [db]
@@ -72,7 +64,7 @@
 
 (def create
   (error-catching-handler
-    (fn [{:keys [fluree/conn] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type] {{:keys [ledger txn] :as body} :body} :parameters}]
       (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
         (log/debug "Ledger" ledger "exists?" ledger-exists?)
         (if ledger-exists?
@@ -82,7 +74,7 @@
                                         :body   {:error err-message}}})))
           (do
             (log/info "Creating ledger" ledger)
-            (let [opts    (txn-body->opts body)
+            (let [opts    (txn-body->opts body content-type)
                   _       (log/debug "create opts:" opts)
                   ledger* (deref! (fluree/create conn ledger opts))
                   db      (-> ledger*
@@ -96,7 +88,7 @@
 
 (def transact
   (error-catching-handler
-    (fn [{:keys [fluree/conn] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type] {{:keys [ledger txn] :as body} :body} :parameters}]
       (println "\nTransacting to" ledger ":" (pr-str txn))
       (let [ledger  (if (deref! (fluree/exists? conn ledger))
                       (do
@@ -104,7 +96,7 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            opts    (txn-body->opts body)
+            opts    (txn-body->opts body content-type)
             ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
             db      (-> ledger
                         fluree/db
@@ -117,66 +109,35 @@
 
 (def query
   (error-catching-handler
-    (fn [{:keys [fluree/conn] {{:keys [ledger query] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
+      (log/debug "query handler received body:" body)
       (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
             query* (-> query
                        (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v))
                                        {}))
-                       (assoc :opts (query-body->opts body)))]
+                       (assoc :opts (query-body->opts body content-type)))]
         (log/debug "query - Querying ledger" ledger "-" query*)
         {:status 200
          :body   (deref! (fluree/query db query*))}))))
 
-
 (def multi-query
   (error-catching-handler
-   (fn [{:keys [fluree/conn] {{:keys [ledger query] :as body} :body} :parameters}]
+   (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
      (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
            query* (-> (reduce-kv (fn [m k v]
-                                   (assoc m k (keywordize-keys v)))
+                                   (assoc m k (util/keywordize-keys v)))
                                  {} query)
-                      (assoc :opts (query-body->opts body)))]
+                      (assoc :opts (query-body->opts body content-type)))]
        (log/debug "multi-query - Querying ledger" ledger "-" query)
        {:status 200
         :body   (deref! (fluree/multi-query db query*))}))))
 
-
-(defn keywordize-history-query
-  "Keywordize the specific history query tree keys. Produces a query with string keys
-  transformed into keyword keys in this specific structure:
-
-  :ledger
-  :query
-    :history
-    :commit-details
-    :t
-      :from
-      :to
-      :at
-  "
-  ([q]
-   (keywordize-history-query q #{"commit-details" "t" "history"}))
-  ([q kws]
-   (reduce-kv
-     (fn [q k v]
-       (let [k* (if (kws k)
-                  (keyword k)
-                  k)
-             v* (if (= "t" k)
-                  (keywordize-history-query v #{"at" "from" "to"})
-                  v)]
-         (assoc q k* v*)))
-     {}
-     q)))
-
 (def history
   (error-catching-handler
-    (fn [{:keys [fluree/conn] {{:keys [ledger query] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
       (log/debug "history handler got query:" query)
       (let [ledger* (->> ledger (fluree/load conn) deref!)
-            query*  (-> query
-                        keywordize-history-query
-                        (assoc :opts (query-body->opts body)))]
+            query*  (assoc query :opts (query-body->opts body content-type))]
         (log/debug "history - Querying ledger" ledger "-" query*)
         (let [results (deref! (fluree/history ledger* query*))]
           (log/debug "history - query results:" results)
