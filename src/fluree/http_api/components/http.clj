@@ -252,12 +252,9 @@
                                    [10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
                                    [100 wrap-set-fuel-header]
-                                   [101 (debug-middleware "BEFORE EXCEPTIONS COERCION:" [:body-params] [])]
                                    [200 coercion/coerce-exceptions-middleware]
-                                   [299 (debug-middleware "BEFORE RESPONSE COERCION:" [:body-params] [])]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
-                                   [401 (debug-middleware "AFTER REQUEST COERCION:" [:parameters :body] nil)]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight
                                     (concat default-fluree-middleware
