@@ -241,7 +241,33 @@
               ["Alice" "Green"]
               ["Brian" nil]]
              (-> query-res :body json/read-value))
-          (str "Response was: " (pr-str query-res))))))
+          (str "Response was: " (pr-str query-res)))))
+
+  (testing "selectOne query works"
+    (let [ledger-name  (create-rand-ledger "query-endpoint-basic-entity-test")
+          json-headers {"Content-Type" "application/json"
+                        "Accept"       "application/json"}
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "txn"    [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}]})
+                        :headers json-headers}
+          txn-res      (post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          query-req    {:body
+                        (json/write-value-as-string
+                         {"ledger" ledger-name
+                          "query"  {"selectOne" '{?t ["*"]}
+                                    "where"     '[[?t "type" "schema:Test"]]}})
+                        :headers json-headers}
+          query-res    (post :query query-req)]
+      (is (= 200 (:status query-res)))
+      (is (= {"id"       "ex:query-test"
+              "rdf:type" ["schema:Test"]
+              "ex:name"  "query-test"}
+             (-> query-res :body json/read-value))))))
 
 (deftest ^:integration ^:edn query-edn-test
   (testing "can query a basic entity w/ EDN"
