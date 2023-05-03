@@ -1,38 +1,126 @@
 (ns fluree.http-api.components.http
   (:require
-    [donut.system :as ds]
-    [jsonista.core :as j]
-    [ring.adapter.jetty9 :as http]
-    [reitit.ring :as ring]
-    [reitit.coercion.spec]
-    [reitit.swagger :as swagger]
-    [reitit.swagger-ui :as swagger-ui]
-    [reitit.ring.coercion :as coercion]
-    [reitit.ring.middleware.muuntaja :as muuntaja]
-    [reitit.ring.middleware.exception :as exception]
-    [fluree.http-api.handlers.ledger :as ledger]
-    [clojure.spec.alpha :as s]
-    [muuntaja.core :as m]
-    [muuntaja.format.json :as json-format]
-    [muuntaja.format.core :as mf]
-    [ring.middleware.cors :as rmc]
-    [fluree.db.util.log :as log])
-  (:import (java.io InputStream InputStreamReader)))
+   [donut.system :as ds]
+   [fluree.db.query.fql.syntax :as fql]
+   [fluree.db.query.history :as fqh]
+   [fluree.db.util.log :as log]
+   [fluree.http-api.handlers.ledger :as ledger]
+   [malli.core :as m]
+   [muuntaja.core :as muuntaja]
+   [muuntaja.format.core :as mf]
+   [muuntaja.format.json :as mfj]
+   [reitit.coercion.malli]
+   [reitit.ring :as ring]
+   [reitit.ring.coercion :as coercion]
+   [reitit.ring.middleware.exception :as exception]
+   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]
+   [ring.adapter.jetty9 :as http]
+   [ring.middleware.cors :as rmc]))
 
 (set! *warn-on-reflection* true)
 
-;; TODO: Flesh this out some more
-(s/def ::non-empty-string (s/and string? #(< 0 (count %))))
-(s/def ::address ::non-empty-string)
-(s/def ::id ::non-empty-string)
-(s/def ::t nat-int?)
-(s/def ::alias ::non-empty-string)
-(s/def ::action (s/or :keywords #{:new :insert}
-                      :strings #{"new" "insert"}))
-(s/def ::ledger ::non-empty-string)
-(s/def ::txn (s/or :single-map map? :collection-of-maps (s/coll-of map?)))
-(s/def ::defaultContext any?)
-(s/def ::opts map?)
+(def LedgerAlias
+  (m/schema [:string {:min 1}]))
+
+(def LedgerAddress
+  (m/schema [:string {:min 1}]))
+
+(def Transaction
+  (m/schema [:orn
+             [:multiple [:sequential map?]]
+             [:single map?]]))
+
+(def TransactOpts
+  (m/schema [:map-of :keyword :any]))
+
+(def Context
+  (m/schema ::fql/context {:registry fql/registry}))
+
+(def CreateRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]
+              [:txn Transaction]
+              [:defaultContext {:optional true} Context]]]))
+
+(def TValue
+  (m/schema pos-int?))
+
+(def DID
+  (m/schema [:string {:min 1}]))
+
+(def CreateResponseBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:alias LedgerAlias]
+              [:t TValue]
+              [:address {:optional true} LedgerAddress]
+              [:id {:optional true} DID]]]))
+
+(def TransactRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]
+              [:txn Transaction]
+              [:opts {:optional true} TransactOpts]]]))
+
+(def TransactResponseBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:alias LedgerAlias]
+              [:t TValue]
+              [:address {:optional true} LedgerAddress]
+              [:id {:optional true} DID]]]))
+
+(def Query
+  (m/schema ::fql/analytical-query {:registry fql/registry}))
+
+(def QueryResponse
+  (m/schema [:orn
+             [:select [:sequential [:or coll? map?]]]
+             [:select-one [:or coll? map?]]]))
+
+(def MultiQuery
+  (m/schema ::fql/multi-query {:registry fql/registry}))
+
+(def MultiQueryResponse
+  (m/schema [:map-of [:or :string :keyword] QueryResponse]))
+
+(def HistoryQuery
+  (m/schema ::fqh/history-query {:registry fqh/registry}))
+
+(def QueryRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]
+              [:query Query]]]))
+
+(def MultiQueryRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]
+              [:query MultiQuery]]]))
+
+(def HistoryQueryRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]
+              [:query HistoryQuery]]]))
+
+(def HistoryQueryResponse
+  (m/schema [:sequential map?]))
+
+(def ErrorResponse
+  [:or :string map?])
 
 (def server
   #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
@@ -49,29 +137,26 @@
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body sequential?}
-                400 {:body string?}
-                500 {:body string?}}
+   :parameters {:body QueryRequestBody}
+   :responses  {200 {:body QueryResponse}
+                400 {:body ErrorResponse}
+                500 {:body ErrorResponse}}
    :handler    ledger/query})
 
 (def multi-query-endpoint
   {:summary    "Endpoint for submitting multi-queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body map?}
-                400 {:body string?}
-                500 {:body string?}}
+   :parameters {:body MultiQueryRequestBody}
+   :responses  {200 {:body MultiQueryResponse}
+                400 {:body ErrorResponse}
+                500 {:body ErrorResponse}}
    :handler    ledger/multi-query})
 
 (def history-endpoint
-  {:summary "Endpoint for submitting history queries"
-   :parameters {:body {:ledger string?
-                       :query  map?}}
-   :responses  {200 {:body sequential?}
-                400 {:body string?}
-                500 {:body string?}}
+  {:summary    "Endpoint for submitting history queries"
+   :parameters {:body HistoryQueryRequestBody}
+   :responses  {200 {:body HistoryQueryResponse}
+                400 {:body ErrorResponse}
+                500 {:body ErrorResponse}}
    :handler    ledger/history})
 
 (defn wrap-assoc-conn
@@ -98,32 +183,12 @@
   [weighted-middleware]
   (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
 
-(defn fluree-json-ld-decoder
-  [options]
-  (let [mapper (json-format/object-mapper! (assoc options
-                                             :decode-key-fn false))]
-    (reify
-      mf/Decode
-      (decode [_ data charset]
-        ;; TODO: Surely there's a way to use the existing upstream decoder w/o
-        ;;       reflection? I couldn't figure it out so the code is copy-pasted
-        ;;       in the next five lines below.
-        (let [decoded (if (.equals "utf-8" ^String charset)
-                        (j/read-value data mapper)
-                        (j/read-value (InputStreamReader. ^InputStream data
-                                                          ^String charset)
-                                      mapper))]
-          ;; keywordize only the top-level keys
-          (reduce-kv (fn [m k v]
-                       (assoc m (keyword k) v))
-                     {} decoded))))))
-
-(def fluree-json-ld-format
+(def json-format
   (mf/map->Format
-    {:name    "application/json"
-     :matches #"^application/(.+\+)?json$"
-     :encoder [json-format/encoder]
-     :decoder [fluree-json-ld-decoder]}))
+   {:name "application/json"
+    :matches #"^application/(.+\+)?json$" ; match application/ld+json too
+    :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
+    :encoder [mfj/encoder]}))
 
 (defn websocket-handler
   [upgrade-request]
@@ -155,33 +220,42 @@
   "Put this in anywhere in your middleware chain to get some insight into what's
   happening there. Logs the request and response at DEBUG level, prefixed with
   the name argument."
-  [name]
-  (fn [handler]
-    (fn [req]
-      (log/debug name "got request:" req)
-      (let [resp (handler req)]
-        (log/debug name "got response:" resp)
-        resp))))
+  ([name] (debug-middleware name [] []))
+  ([name req-key-path resp-key-path]
+   (fn [handler]
+     (fn [req]
+       (when-let [req* (when req-key-path (get-in req req-key-path))]
+         (log/debug name "got request:" req*))
+       (let [resp (handler req)]
+         (when-let [resp* (when resp-key-path (get-in resp resp-key-path))]
+           (log/debug name "got response:" resp*))
+         resp)))))
 
 (defn app
   [{:keys [:fluree/conn :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
-  (let [default-fluree-middleware [[10 wrap-cors]
+  (let [exception-middleware      (exception/create-exception-middleware
+                                   (merge
+                                    exception/default-handlers
+                                    {::exception/default
+                                     (partial exception/wrap-log-to-console
+                                              exception/http-response-handler)}))
+        ;; Exception middleware should always be first AND last.
+        ;; The last (highest sort order) one ensures that middleware that comes
+        ;; after it will not be skipped on response if handler code throws an
+        ;; exception b/c this it catches them and turns them into responses.
+        ;; The first (lowest sort order) one ensures that exceptions thrown by
+        ;; other middleware are caught and turned into appropriate responses.
+        ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
+        default-fluree-middleware [[1 exception-middleware]
+                                   [10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
                                    [100 wrap-set-fuel-header]
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
-                                   ;; Exception middleware should always be last.
-                                   ;; Otherwise middleware that comes after it
-                                   ;; will be skipped on response if handler code
-                                   ;; throws an exception b/c this is what catches
-                                   ;; them and turns them into responses.
-                                   [1000 (exception/create-exception-middleware
-                                           {::exception/default
-                                            (partial exception/wrap-log-to-console
-                                                     exception/http-response-handler)})]]
+                                   [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight
                                     (concat default-fluree-middleware
                                             middleware))]
@@ -194,22 +268,18 @@
          ["/fluree" {:middleware fluree-middleware}
           ["/create"
            {:post {:summary    "Endpoint for creating new ledgers"
-                   :parameters {:body (s/keys :opt-un [::defaultContext]
-                                              :req-un [::ledger ::txn])}
-                   :responses  {201 {:body (s/keys :opt-un [::address ::id]
-                                                   :req-un [::alias ::t])}
-                                400 {:body string?}
-                                500 {:body string?}}
+                   :parameters {:body CreateRequestBody}
+                   :responses  {201 {:body CreateResponseBody}
+                                400 {:body ErrorResponse}
+                                500 {:body ErrorResponse}}
                    :handler    ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body (s/keys :req-un [::ledger ::txn]
-                                              :opt-un [::opts])}
-                   :responses  {200 {:body (s/keys :opt-un [::address ::id]
-                                                   :req-un [::alias ::t])}
-                                400 {:body string?}
-                                500 {:body string?}}
-                   :handler    ledger/transact}}]
+                   :parameters {:body TransactRequestBody}
+                   :responses {200 {:body TransactResponseBody}
+                               400 {:body ErrorResponse}
+                               500 {:body ErrorResponse}}
+                   :handler ledger/transact}}]
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
@@ -219,28 +289,29 @@
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]]]
-        {:data {:coercion   reitit.coercion.spec/coercion
-                :muuntaja   (m/create
-                              (assoc-in
-                                m/default-options
-                                [:formats "application/json"]
-                                fluree-json-ld-format))
+        {:data {:coercion   (reitit.coercion.malli/create
+                             {:strip-extra-keys false})
+                :muuntaja   (muuntaja/create
+                             (assoc-in
+                              muuntaja/default-options
+                              [:formats "application/json"]
+                              json-format))
                 :middleware [swagger/swagger-feature
-                             muuntaja/format-negotiate-middleware
-                             muuntaja/format-response-middleware
-                             muuntaja/format-request-middleware]}})
+                             muuntaja-mw/format-negotiate-middleware
+                             muuntaja-mw/format-response-middleware
+                             muuntaja-mw/format-request-middleware]}})
       (ring/routes
-        (ring/ring-handler
-          (ring/router
-            (concat
-              [["/ws" {:get (fn [req]
-                              (if (http/ws-upgrade-request? req)
-                                (http/ws-upgrade-response websocket-handler)
-                                {:status 400
-                                 :body   "Invalid websocket upgrade request"}))}]
-               routes])))
-        (swagger-ui/create-swagger-ui-handler
-          {:path   "/"
-           :config {:validatorUrl     nil
-                    :operationsSorter "alpha"}})
-        (ring/create-default-handler)))))
+       (ring/ring-handler
+        (ring/router
+         (concat
+          [["/ws" {:get (fn [req]
+                          (if (http/ws-upgrade-request? req)
+                            (http/ws-upgrade-response websocket-handler)
+                            {:status 400
+                             :body   "Invalid websocket upgrade request"}))}]
+           routes])))
+       (swagger-ui/create-swagger-ui-handler
+        {:path   "/"
+         :config {:validatorUrl     nil
+                  :operationsSorter "alpha"}})
+       (ring/create-default-handler)))))
