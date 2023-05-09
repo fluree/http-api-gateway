@@ -112,10 +112,7 @@
     (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
       (log/debug "query handler received body:" body)
       (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-            query* (-> query
-                       (->> (reduce-kv (fn [acc k v] (assoc acc (keyword k) v))
-                                       {}))
-                       (assoc :opts (query-body->opts body content-type)))]
+            query* (assoc query :opts (query-body->opts body content-type))]
         (log/debug "query - Querying ledger" ledger "-" query*)
         {:status 200
          :body   (deref! (fluree/query db query*))}))))
@@ -124,10 +121,7 @@
   (error-catching-handler
    (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
      (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-           query* (-> (reduce-kv (fn [m k v]
-                                   (assoc m k (util/keywordize-keys v)))
-                                 {} query)
-                      (assoc :opts (query-body->opts body content-type)))]
+           query* (assoc query :opts (query-body->opts body content-type))]
        (log/debug "multi-query - Querying ledger" ledger "-" query)
        {:status 200
         :body   (deref! (fluree/multi-query db query*))}))))
