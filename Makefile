@@ -9,3 +9,8 @@ uberjar: target/http-api-gateway-%.jar
 .PHONY: test
 test:
 	clojure -X:test
+
+.PHONY: clean
+clean:
+	rm -rf target
+	rm -rf .cpcache
