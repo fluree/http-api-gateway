@@ -120,6 +120,78 @@
       (is (= {"id"       "ex:query-test"
               "rdf:type" ["schema:Test"]
               "ex:name"  "query-test"}
+             (-> query-res :body json/read-value)))))
+
+  (testing "bind query works"
+    (let [ledger-name (create-rand-ledger "query-endpoint-bind-test")
+          txn-req     {:headers json-headers
+                       :body
+                       (json/write-value-as-string
+                        {"ledger" ledger-name
+                         "txn"
+                         {"defaultContext"
+                          {"id"     "@id"
+                           "type"   "@type"
+                           "xsd"    "http://www.w3.org/2001/XMLSchema#"
+                           "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                           "rdfs"   "http://www.w3.org/2000/01/rdf-schema#"
+                           "sh"     "http://www.w3.org/ns/shacl#"
+                           "schema" "http://schema.org/"
+                           "skos"   "http://www.w3.org/2008/05/skos#"
+                           "wiki"   "https://www.wikidata.org/wiki/"
+                           "f"      "https://ns.flur.ee/ledger#"
+                           "ex"     "http://example.org/"}
+                          "txn" {"@graph"
+                                 [{"@id"         "ex:freddy"
+                                   "@type"       "ex:Yeti"
+                                   "schema:age"  4
+                                   "schema:name" "Freddy"
+                                   "ex:verified" true}
+                                  {"@id"         "ex:letty"
+                                   "@type"       "ex:Yeti"
+                                   "schema:age"  2
+                                   "ex:nickname" "Letty"
+                                   "schema:name" "Leticia"
+                                   "schema:follows"
+                                   [{"@type"  "@id"
+                                     "@value" "ex:freddy"}]}
+                                  {"@id"         "ex:betty"
+                                   "@type"       "ex:Yeti"
+                                   "schema:age"  82
+                                   "schema:name" "Betty"
+                                   "schema:follows"
+                                   [{"@type"  "@id"
+                                     "@value" "ex:freddy"}]}
+                                  {"@id"         "ex:andrew"
+                                   "@type"       "schema:Person"
+                                   "schema:age"  35
+                                   "schema:name" "Andrew Johnson"
+                                   "schema:follows"
+                                   [{"@type"  "@id"
+                                     "@value" "ex:freddy"}
+                                    {"@type"  "@id"
+                                     "@value" "ex:letty"}
+                                    {"@type"  "@id"
+                                     "@value" "ex:betty"}]}]}}})}
+
+          txn-res     (post :transact txn-req)
+          _           (assert (= 200 (:status txn-res)))
+          query-req   {:body
+                       (json/write-value-as-string
+                        {"ledger" ledger-name
+                         "query"
+                         {"select" ["?name" "?age" "?canVote"]
+                          "where"  [["?s" "schema:name" "?name"]
+                                    ["?s" "schema:age" "?age"]
+                                    {"bind" {"?canVote" "(>= ?age 18)"}}]}})
+                       :headers json-headers}
+          query-res   (post :query query-req)]
+      (is (= 200 (:status query-res))
+          (str "Query response was: " (pr-str query-res)))
+      (is (= [["Freddy" 4 false]
+              ["Leticia" 2 false]
+              ["Betty" 82 true]
+              ["Andrew Johnson" 35 true]]
              (-> query-res :body json/read-value))))))
 
 (deftest ^:integration ^:edn query-edn-test
