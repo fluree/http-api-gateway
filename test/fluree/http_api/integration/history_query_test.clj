@@ -21,8 +21,6 @@
 (deftest ^:integration ^:json history-query-json-test
   (testing "basic JSON history query works"
     (let [ledger-name   "history-query-json-test"
-          json-headers  {"Content-Type" "application/json"
-                         "Accept"       "application/json"}
           txn-req       {:body
                          (json/write-value-as-string
                           {"ledger" ledger-name
@@ -80,8 +78,6 @@
 (deftest ^:integration ^:edn history-query-edn-test
   (testing "basic EDN history query works"
     (let [ledger-name   "history-query-edn-test"
-          edn-headers   {"Content-Type" "application/edn"
-                         "Accept"       "application/edn"}
           txn-req       {:body
                          (pr-str
                           {:ledger ledger-name

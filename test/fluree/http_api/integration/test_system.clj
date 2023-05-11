@@ -5,6 +5,14 @@
             [fluree.http-api.system :as sys])
   (:import (java.net ServerSocket)))
 
+(def json-headers
+  {"Content-Type" "application/json"
+   "Accept"       "application/json"})
+
+(def edn-headers
+  {"Content-Type" "application/edn"
+   "Accept"       "application/edn"})
+
 (defn find-open-port
   ([] (find-open-port nil))
   ([_] ; so it can be used in swap!
