@@ -3,6 +3,7 @@
    [donut.system :as ds]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history :as fqh]
+   [fluree.db.json-ld.transact :as transact]
    [fluree.db.util.log :as log]
    [fluree.http-api.handlers.ledger :as ledger]
    [malli.core :as m]
@@ -28,9 +29,7 @@
   (m/schema [:string {:min 1}]))
 
 (def Transaction
-  (m/schema [:orn
-             [:multiple [:sequential map?]]
-             [:single map?]]))
+  (m/schema ::transact/txn {:registry transact/registry}))
 
 (def TransactOpts
   (m/schema [:map-of :keyword :any]))
