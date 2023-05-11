@@ -9,8 +9,6 @@
 (deftest ^:integration ^:json query-json-test
   (testing "can query a basic entity w/ JSON"
     (let [ledger-name  (create-rand-ledger "query-endpoint-basic-entity-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
                          {"ledger" ledger-name
@@ -35,8 +33,6 @@
 
   (testing "union query works"
     (let [ledger-name  (create-rand-ledger "query-endpoint-union-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
                          {"ledger" ledger-name
@@ -64,8 +60,6 @@
 
   (testing "optional query works"
     (let [ledger-name  (create-rand-ledger "query-endpoint-optional-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
                          {"ledger" ledger-name
@@ -106,8 +100,6 @@
 
   (testing "selectOne query works"
     (let [ledger-name  (create-rand-ledger "query-endpoint-basic-entity-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           txn-req      {:body
                         (json/write-value-as-string
                          {"ledger" ledger-name
@@ -133,8 +125,6 @@
 (deftest ^:integration ^:edn query-edn-test
   (testing "can query a basic entity w/ EDN"
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
-          edn-headers {"Content-Type" "application/edn"
-                       "Accept"       "application/edn"}
           txn-req     {:body
                        (pr-str {:ledger ledger-name
                                 :txn    [{:id      :ex/query-test

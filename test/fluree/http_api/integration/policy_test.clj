@@ -9,8 +9,6 @@
 (deftest ^:integration ^:json policy-opts-json-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (json/write-value-as-string
@@ -114,8 +112,6 @@
 (deftest ^:integration ^:edn policy-opts-edn-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
-          edn-headers  {"Content-Type" "application/edn"
-                        "Accept"       "application/edn"}
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (pr-str

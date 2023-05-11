@@ -8,8 +8,6 @@
 (deftest ^:integration ^:json multi-query-json-test
   (testing "can run a multi-query w/ opts in JSON"
     (let [ledger-name  (create-rand-ledger "multi-query-opts-json-test")
-          json-headers {"Content-Type" "application/json"
-                        "Accept"       "application/json"}
           wes-did      "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (json/write-value-as-string
