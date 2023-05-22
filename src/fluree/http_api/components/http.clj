@@ -140,7 +140,7 @@
    :responses  {200 {:body QueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/query})
+   :handler    #'ledger/query})
 
 (def multi-query-endpoint
   {:summary    "Endpoint for submitting multi-queries"
@@ -148,7 +148,7 @@
    :responses  {200 {:body MultiQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/multi-query})
+   :handler    #'ledger/multi-query})
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
@@ -156,7 +156,7 @@
    :responses  {200 {:body HistoryQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/history})
+   :handler    #'ledger/history})
 
 (defn wrap-assoc-conn
   [conn handler]
@@ -271,14 +271,14 @@
                    :responses  {201 {:body CreateResponseBody}
                                 400 {:body ErrorResponse}
                                 500 {:body ErrorResponse}}
-                   :handler    ledger/create}}]
+                   :handler    #'ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body TransactRequestBody}
                    :responses {200 {:body TransactResponseBody}
                                400 {:body ErrorResponse}
                                500 {:body ErrorResponse}}
-                   :handler ledger/transact}}]
+                   :handler #'ledger/transact}}]
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
