@@ -1,8 +1,10 @@
 (ns fluree.http-api.components.http
   (:require
+   [clojure.core.async :as async]
    [donut.system :as ds]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history :as fqh]
+   [fluree.db.json-ld.credential :as cred]
    [fluree.db.json-ld.transact :as transact]
    [fluree.db.util.log :as log]
    [fluree.http-api.handlers.ledger :as ledger]
@@ -171,6 +173,30 @@
                  :access-control-allow-origin [#".*"]
                  :access-control-allow-methods [:get :post]))
 
+(defn unwrap-credential
+  "Checks to see if the request body (:body-params) is a verifiable credential. If it is,
+  verify the validity of the signature. If the signature is valid, add the verified
+  issuer to the request and unwrap the credential, passing along the credential subject
+  as :body-params. If the signature is not valid, throws an invalid signature error. If
+  the request body is not a credential, nothing is done."
+  [handler]
+  (fn [{:keys [body-params] :as req}]
+    (let [verified (async/<!! (cred/verify body-params))
+
+          {:keys [subject issuer]}
+          (cond (:subject verified)     ; valid credential
+                verified
+
+                (nil? verified)         ; no credential
+                {:subject body-params}
+
+                :else                   ; invalid credential
+                (throw (ex-info "Invalid credential"
+                                {:response {:status 400
+                                            :body {:error "Invalid credential"}}})))
+          req* (assoc req :body-params subject :credential/issuer issuer)]
+      (handler req*))))
+
 (defn wrap-set-fuel-header
   [handler]
   (fn [req]
@@ -251,6 +277,7 @@
                                    [10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
                                    [100 wrap-set-fuel-header]
+                                   [150 unwrap-credential]
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
