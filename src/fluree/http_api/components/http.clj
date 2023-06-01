@@ -194,7 +194,7 @@
                 (throw (ex-info "Invalid credential"
                                 {:response {:status 400
                                             :body {:error "Invalid credential"}}})))
-          req* (assoc req :body-params subject :credential/issuer issuer)]
+          req* (assoc req :body-params subject :credential/did issuer)]
       (handler req*))))
 
 (defn wrap-set-fuel-header

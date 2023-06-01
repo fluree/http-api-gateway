@@ -8,15 +8,34 @@
 
 (test/use-fixtures :once test-utils/run-test-server)
 
+(def default-context
+  {"id" "@id"
+   "type" "@type"
+   "xsd" "http://www.w3.org/2001/XMLSchema#"
+   "rdf" "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   "rdfs" "http://www.w3.org/2000/01/rdf-schema#"
+   "sh" "http://www.w3.org/ns/shacl#"
+   "schema" "http://schema.org/"
+   "skos" "http://www.w3.org/2008/05/skos#"
+   "wiki" "https://www.wikidata.org/wiki/"
+   "f" "https://ns.flur.ee/ledger#"
+   "ex" "http://example.com/ns/"})
+
 (deftest ^:integration  credential-test
   (let [ledger-name "credential-test"]
     (testing "create"
-      (let [create-req  (async/<!! (cred/generate
-                                     {"ledger" ledger-name
-                                      "txn"    [{"id"      "ex:cred-test"
-                                                 "type"    "schema:Test"
-                                                 "ex:name" "cred test"}]}
-                                     (:private test-utils/auth)))
+      ;; cannot transact without roles already defined
+      (let [create-req  {"ledger" ledger-name
+                         "defaultContext" default-context
+                         "txn"    [{"id"      (:id test-utils/auth)
+                                    "f:role"  {"id" "role:root"}
+                                    "type"    "schema:Person"
+                                    "ex:name" "Goose"}
+                                   {"id" "ex:rootPolicy"
+                                    "type" "f:Policy"
+                                    "f:targetNode" {"id" "f:allNodes"}
+                                    "f:allow" [{"f:targetRole" {"id" "role:root"}
+                                                "f:action" [{"id" "f:view"} {"id" "f:modify"}]}]}]}
             create-res  (test-utils/post :create {:body    (json/write-value-as-string create-req)
                                                   :headers test-utils/json-headers})]
         (is (= 201 (:status create-res)))
@@ -49,7 +68,7 @@
         (is (= 200 (:status query-res)))
         (is (= [{"ex:name"  "cred test",
                  "ex:foo"   1,
-                 "id"       "ex:cred-test",
+                 "id"       "ex:cred-test"
                  "rdf:type" ["schema:Test"]}]
                (-> query-res :body json/read-value)))))
     (testing "multi-query"
@@ -83,12 +102,6 @@
                                                    :headers test-utils/json-headers})]
         (is (= 200 (:status history-res)))
         (is (= [{"f:retract" [],
-                 "f:assert"
-                 [{"ex:name" "cred test",
-                   "id" "ex:cred-test",
-                   "rdf:type" ["schema:Test"]}],
-                 "f:t" 1}
-                {"f:retract" [{"ex:name" "cred test", "id" "ex:cred-test"}],
                  "f:assert"
                  [{"ex:name" "cred test",
                    "ex:foo" 1,
