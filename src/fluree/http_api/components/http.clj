@@ -183,7 +183,7 @@
   (fn [{:keys [body-params] :as req}]
     (let [verified (async/<!! (cred/verify body-params))
 
-          {:keys [subject issuer]}
+          {:keys [subject did]}
           (cond (:subject verified)     ; valid credential
                 verified
 
@@ -194,7 +194,7 @@
                 (throw (ex-info "Invalid credential"
                                 {:response {:status 400
                                             :body {:error "Invalid credential"}}})))
-          req* (assoc req :body-params subject :credential/did issuer)]
+          req* (assoc req :body-params subject :credential/did did)]
       (handler req*))))
 
 (defn wrap-set-fuel-header
