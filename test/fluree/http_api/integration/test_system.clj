@@ -65,3 +65,8 @@
     (if (= 201 (:status res))
       (get-in res [:body :alias])
       (throw (ex-info "Error creating random ledger" res)))))
+
+(def auth
+  {:id "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
+   :public "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
+   :private "509553eece84d5a410f1012e8e19e84e938f226aa3ad144e2d12f36df0f51c1e"})

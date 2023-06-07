@@ -1,8 +1,10 @@
 (ns fluree.http-api.components.http
   (:require
+   [clojure.core.async :as async]
    [donut.system :as ds]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history :as fqh]
+   [fluree.db.json-ld.credential :as cred]
    [fluree.db.json-ld.transact :as transact]
    [fluree.db.util.log :as log]
    [fluree.http-api.handlers.ledger :as ledger]
@@ -140,7 +142,7 @@
    :responses  {200 {:body QueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/query})
+   :handler    #'ledger/query})
 
 (def multi-query-endpoint
   {:summary    "Endpoint for submitting multi-queries"
@@ -148,7 +150,7 @@
    :responses  {200 {:body MultiQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/multi-query})
+   :handler    #'ledger/multi-query})
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
@@ -156,7 +158,7 @@
    :responses  {200 {:body HistoryQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :handler    ledger/history})
+   :handler    #'ledger/history})
 
 (defn wrap-assoc-conn
   [conn handler]
@@ -170,6 +172,30 @@
   (rmc/wrap-cors handler
                  :access-control-allow-origin [#".*"]
                  :access-control-allow-methods [:get :post]))
+
+(defn unwrap-credential
+  "Checks to see if the request body (:body-params) is a verifiable credential. If it is,
+  verify the validity of the signature. If the signature is valid, add the verified
+  issuer to the request and unwrap the credential, passing along the credential subject
+  as :body-params. If the signature is not valid, throws an invalid signature error. If
+  the request body is not a credential, nothing is done."
+  [handler]
+  (fn [{:keys [body-params] :as req}]
+    (let [verified (async/<!! (cred/verify body-params))
+
+          {:keys [subject did]}
+          (cond (:subject verified)     ; valid credential
+                verified
+
+                (nil? verified)         ; no credential
+                {:subject body-params}
+
+                :else                   ; invalid credential
+                (throw (ex-info "Invalid credential"
+                                {:response {:status 400
+                                            :body {:error "Invalid credential"}}})))
+          req* (assoc req :body-params subject :credential/did did)]
+      (handler req*))))
 
 (defn wrap-set-fuel-header
   [handler]
@@ -251,6 +277,7 @@
                                    [10 wrap-cors]
                                    [10 (partial wrap-assoc-conn conn)]
                                    [100 wrap-set-fuel-header]
+                                   [150 unwrap-credential]
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
@@ -271,14 +298,14 @@
                    :responses  {201 {:body CreateResponseBody}
                                 400 {:body ErrorResponse}
                                 500 {:body ErrorResponse}}
-                   :handler    ledger/create}}]
+                   :handler    #'ledger/create}}]
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body TransactRequestBody}
                    :responses {200 {:body TransactResponseBody}
                                400 {:body ErrorResponse}
                                500 {:body ErrorResponse}}
-                   :handler ledger/transact}}]
+                   :handler #'ledger/transact}}]
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]

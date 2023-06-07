@@ -47,9 +47,8 @@
 (defn txn-body->opts
   [{:keys [defaultContext opts] :as _body} content-type]
   (let [content-type* (header->content-type content-type)]
-    (cond-> opts
-            true (assoc :context-type (content-type->context-type content-type*))
-            defaultContext (assoc :defaultContext defaultContext))))
+    (cond-> (assoc opts :context-type (content-type->context-type content-type*))
+      defaultContext (assoc :defaultContext defaultContext))))
 
 (defn query-body->opts
   [{:keys [query] :as _body} content-type]
@@ -64,7 +63,7 @@
 
 (def create
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger txn] :as body} :body} :parameters}]
       (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
         (log/debug "Ledger" ledger "exists?" ledger-exists?)
         (if ledger-exists?
@@ -72,23 +71,22 @@
             (throw (ex-info err-message
                             {:response {:status 409
                                         :body   {:error err-message}}})))
-          (do
-            (log/info "Creating ledger" ledger)
-            (let [opts    (txn-body->opts body content-type)
-                  _       (log/debug "create opts:" opts)
-                  ledger* (deref! (fluree/create conn ledger opts))
-                  db      (-> ledger*
-                              fluree/db
-                              (fluree/stage txn opts)
-                              deref!
-                              (->> (fluree/commit! ledger*))
-                              deref!)]
-              {:status 201
-               :body   (ledger-summary db)})))))))
+          (let [opts    (cond-> (txn-body->opts body content-type)
+                          did (assoc :did did))
+                _       (log/info "Creating ledger" ledger opts)
+                ledger* (deref! (fluree/create conn ledger opts))
+                db      (-> ledger*
+                            fluree/db
+                            (fluree/stage txn opts)
+                            deref!
+                            (->> (fluree/commit! ledger*))
+                            deref!)]
+            {:status 201
+             :body   (ledger-summary db)}))))))
 
 (def transact
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger txn] :as body} :body} :parameters}]
       (println "\nTransacting to" ledger ":" (pr-str txn))
       (let [ledger  (if (deref! (fluree/exists? conn ledger))
                       (do
@@ -96,7 +94,8 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            opts    (txn-body->opts body content-type)
+            opts    (cond-> (txn-body->opts body content-type)
+                      did (assoc :did did))
             ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
             db      (-> ledger
                         fluree/db
@@ -109,29 +108,35 @@
 
 (def query
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
       (log/debug "query handler received body:" body)
       (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-            query* (assoc query :opts (query-body->opts body content-type))]
+            opts (cond-> (query-body->opts body content-type)
+                   did (assoc :did did))
+            query* (assoc query :opts opts)]
         (log/debug "query - Querying ledger" ledger "-" query*)
         {:status 200
          :body   (deref! (fluree/query db query*))}))))
 
 (def multi-query
   (error-catching-handler
-   (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
+   (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
      (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-           query* (assoc query :opts (query-body->opts body content-type))]
+           opts (cond-> (query-body->opts body content-type)
+                  did (assoc :did did))
+           query* (assoc query :opts opts)]
        (log/debug "multi-query - Querying ledger" ledger "-" query)
        {:status 200
         :body   (deref! (fluree/multi-query db query*))}))))
 
 (def history
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type] {{:keys [ledger query] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
       (log/debug "history handler got query:" query)
       (let [ledger* (->> ledger (fluree/load conn) deref!)
-            query*  (assoc query :opts (query-body->opts body content-type))]
+            opts (cond-> (query-body->opts body content-type)
+                   did (assoc :did did))
+            query*  (assoc query :opts opts)]
         (log/debug "history - Querying ledger" ledger "-" query*)
         (let [results (deref! (fluree/history ledger* query*))]
           (log/debug "history - query results:" results)
