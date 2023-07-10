@@ -34,7 +34,7 @@
                                      "ex:User" {"id" "ex:wes"}
                                      "f:role"  {"id" "ex:userRole"}}]})
                         :headers json-headers}
-          txn-res      (post :transact txn-req)
+          txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           query-req    {:body
                         (json/write-value-as-string
@@ -51,7 +51,7 @@
                                     "opts" {"role" "ex:userRole"
                                             "did"  wes-did}}})
                         :headers json-headers}
-          query-res    (post :multi-query query-req)]
+          query-res    (api-post :multi-query query-req)]
       (is (= 200 (:status query-res))
           (str "Query result was: " (pr-str query-res)))
       (is (= {"device" [{"ex:name"  "iPhone"

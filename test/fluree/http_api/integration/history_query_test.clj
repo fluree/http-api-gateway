@@ -28,7 +28,7 @@
                                       "type"    "schema:Test"
                                       "ex:name" "query-test"}]})
                          :headers json-headers}
-          txn-res       (post :create txn-req)
+          txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (json/write-value-as-string
@@ -36,7 +36,7 @@
                            "txn"    [{"id"           "ex:query-test"
                                       "ex:test-type" "integration"}]})
                          :headers json-headers}
-          txn2-res      (post :transact txn2-req)
+          txn2-res      (api-post :transact txn2-req)
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (json/write-value-as-string
@@ -44,7 +44,7 @@
                            "query"  {"commit-details" true
                                      "t"              {"at" "latest"}}})
                          :headers json-headers}
-          query-res     (post :history query-req)
+          query-res     (api-post :history query-req)
           query-results (-> query-res :body json/read-value)]
       (is (= 200 (:status query-res))
           (str "History query response was: " (pr-str query-res)))
@@ -85,7 +85,7 @@
                                      :type    :schema/Test
                                      :ex/name "query-test"}]})
                          :headers edn-headers}
-          txn-res       (post :create txn-req)
+          txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (pr-str
@@ -93,7 +93,7 @@
                            :txn    [{:id           :ex/query-test
                                      :ex/test-type "integration"}]})
                          :headers edn-headers}
-          txn2-res      (post :transact txn2-req)
+          txn2-res      (api-post :transact txn2-req)
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (pr-str
@@ -101,7 +101,7 @@
                            :query  {:commit-details true
                                     :t              {:from 1}}})
                          :headers edn-headers}
-          query-res     (post :history query-req)
+          query-res     (api-post :history query-req)
           query-results (-> query-res :body edn/read-string)]
       (is (= 200 (:status query-res))
           (str "History query response was: " (pr-str query-res)))

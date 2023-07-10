@@ -36,8 +36,8 @@
                                     "f:targetNode" {"id" "f:allNodes"}
                                     "f:allow" [{"f:targetRole" {"id" "role:root"}
                                                 "f:action" [{"id" "f:view"} {"id" "f:modify"}]}]}]}
-            create-res  (test-utils/post :create {:body    (json/write-value-as-string create-req)
-                                                  :headers test-utils/json-headers})]
+            create-res  (test-utils/api-post :create {:body (json/write-value-as-string create-req)
+                                                      :headers  test-utils/json-headers})]
         (is (= 201 (:status create-res)))
         (is (= {"address" "fluree:memory://credential-test/main/head",
                 "t"       1,
@@ -51,8 +51,8 @@
                                              "ex:name" "cred test"
                                              "ex:foo"  1}]}
                                  (:private test-utils/auth)))
-            txn-res (test-utils/post :transact {:body (json/write-value-as-string txn-req)
-                                                :headers test-utils/json-headers})]
+            txn-res (test-utils/api-post :transact {:body (json/write-value-as-string txn-req)
+                                                    :headers  test-utils/json-headers})]
         (is (= 200 (:status txn-res)))
         (is (= {"address" "fluree:memory://credential-test/main/head",
                 "t"       2,
@@ -63,8 +63,8 @@
                                                  "query"  {"select" {"?t" ["*"]}
                                                            "where"  [["?t" "type" "schema:Test"]]}}
                                                 (:private test-utils/auth)))
-            query-res (test-utils/post :query {:body    (json/write-value-as-string query-req)
-                                               :headers test-utils/json-headers})]
+            query-res (test-utils/api-post :query {:body (json/write-value-as-string query-req)
+                                                   :headers  test-utils/json-headers})]
         (is (= 200 (:status query-res)))
         (is (= [{"ex:name"  "cred test",
                  "ex:foo"   1,
@@ -78,8 +78,8 @@
                                                                  "subj" {"select" {"?s" ["*"]}
                                                                          "where"  [["?s" "@id" "ex:cred-test"]]}}}
                                                       (:private test-utils/auth)))
-            multi-query-res (test-utils/post :multi-query {:body    (json/write-value-as-string multi-query-req)
-                                                           :headers test-utils/json-headers})]
+            multi-query-res (test-utils/api-post :multi-query {:body (json/write-value-as-string multi-query-req)
+                                                               :headers  test-utils/json-headers})]
         (is (= 200 (:status multi-query-res)))
         (is (= {"subj"
                 [{"ex:name"  "cred test",
@@ -98,8 +98,8 @@
                                                              "t"       {"from" 1}}}
                                                   (:private test-utils/auth)))
 
-            history-res (test-utils/post :history {:body    (json/write-value-as-string history-req)
-                                                   :headers test-utils/json-headers})]
+            history-res (test-utils/api-post :history {:body (json/write-value-as-string history-req)
+                                                       :headers  test-utils/json-headers})]
         (is (= 200 (:status history-res)))
         (is (= [{"f:retract" [],
                  "f:assert"
@@ -120,8 +120,8 @@
                                          (:private test-utils/auth)))
                             (assoc-in ["credentialSubject" "txn" "ex:KEY"] "ALTEREDVALUE"))
 
-            invalid-res (test-utils/post :transact {:body    (json/write-value-as-string invalid-tx)
-                                                    :headers test-utils/json-headers})]
+            invalid-res (test-utils/api-post :transact {:body (json/write-value-as-string invalid-tx)
+                                                        :headers  test-utils/json-headers})]
         (is (= 400 (:status invalid-res)))
         (is (= {"error" "Invalid credential"}
                (-> invalid-res :body json/read-value)))))))
