@@ -183,15 +183,16 @@
                          {"select" ["?name" "?age" "?canVote"]
                           "where"  [["?s" "schema:name" "?name"]
                                     ["?s" "schema:age" "?age"]
-                                    {"bind" {"?canVote" "(>= ?age 18)"}}]}})
+                                    {"bind" {"?canVote" "(>= ?age 18)"}}]
+                          "orderBy" "?name"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Query response was: " (pr-str query-res)))
-      (is (= [["Freddy" 4 false]
-              ["Leticia" 2 false]
+      (is (= [["Andrew Johnson" 35 true]
               ["Betty" 82 true]
-              ["Andrew Johnson" 35 true]]
+              ["Freddy" 4 false]
+              ["Leticia" 2 false]]
              (-> query-res :body json/read-value))))))
 
 (deftest ^:integration ^:edn query-edn-test
