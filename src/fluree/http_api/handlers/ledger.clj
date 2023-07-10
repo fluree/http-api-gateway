@@ -63,7 +63,8 @@
 
 (def create
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did]
+          {{:keys [ledger txn] :as body} :body} :parameters}]
       (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
         (log/debug "Ledger" ledger "exists?" ledger-exists?)
         (if ledger-exists?
@@ -86,7 +87,8 @@
 
 (def transact
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger txn] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did]
+          {{:keys [ledger txn] :as body} :body} :parameters}]
       (println "\nTransacting to" ledger ":" (pr-str txn))
       (let [ledger  (if (deref! (fluree/exists? conn ledger))
                       (do
@@ -94,11 +96,19 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            opts    (cond-> (txn-body->opts body content-type)
-                      did (assoc :did did))
-            ;; TODO: Add a transact! fn to f.d.json-ld.api that stages and commits in one step
-            db      (-> ledger
-                        fluree/db
+
+            {:keys [defaultContext] :as opts} (txn-body->opts body content-type)
+
+            opts    (cond-> opts
+                      did (assoc :did did)
+                      defaultContext (dissoc :defaultContext :default-context))
+            db      (fluree/db ledger)
+            db      (if defaultContext
+                      (do
+                        (log/trace "Updating default context to:" defaultContext)
+                        (fluree/update-default-context db defaultContext))
+                      db)
+            db      (-> db
                         (fluree/stage txn opts)
                         deref!
                         (->> (fluree/commit! ledger))
@@ -142,3 +152,13 @@
           (log/debug "history - query results:" results)
           {:status 200
            :body results})))))
+
+(def default-context
+  (error-catching-handler
+   (fn [{:keys [fluree/conn] {{:keys [ledger] :as body} :body} :parameters}]
+     (log/debug "default-context handler got request:" body)
+     (let [ledger* (->> ledger (fluree/load conn) deref!)]
+       (let [results (-> ledger* fluree/db fluree/default-context)]
+         (log/debug "default-context for ledger" (str ledger ":") results)
+         {:status 200
+          :body   results})))))

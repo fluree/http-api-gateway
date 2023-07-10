@@ -120,6 +120,14 @@
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
 
+(def DefaultContextRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]]]))
+
+(def DefaultContextResponseBody Context)
+
 (def ErrorResponse
   [:or :string map?])
 
@@ -302,10 +310,10 @@
           ["/transact"
            {:post {:summary    "Endpoint for submitting transactions"
                    :parameters {:body TransactRequestBody}
-                   :responses {200 {:body TransactResponseBody}
-                               400 {:body ErrorResponse}
-                               500 {:body ErrorResponse}}
-                   :handler #'ledger/transact}}]
+                   :responses  {200 {:body TransactResponseBody}
+                                400 {:body ErrorResponse}
+                                500 {:body ErrorResponse}}
+                   :handler    #'ledger/transact}}]
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
@@ -314,7 +322,14 @@
             :post multi-query-endpoint}]
           ["/history"
            {:get  history-endpoint
-            :post history-endpoint}]]]
+            :post history-endpoint}]
+          ["/defaultContext"
+           {:get  {:summary    "Endpoint for retrieving default contexts"
+                   :parameters {:body DefaultContextRequestBody}
+                   :responses  {200 {:body DefaultContextResponseBody}
+                                400 {:body ErrorResponse}
+                                500 {:body ErrorResponse}}
+                   :handler    #'ledger/default-context}}]]]
         {:data {:coercion   (reitit.coercion.malli/create
                              {:strip-extra-keys false})
                 :muuntaja   (muuntaja/create
