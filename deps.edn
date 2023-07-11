@@ -3,15 +3,15 @@
          org.clojure/core.async         {:mvn/version "1.6.673"}
          club.donutpower/system         {:mvn/version "0.0.165"}
          aero/aero                      {:mvn/version "1.1.6"}
-         info.sunng/ring-jetty9-adapter {:mvn/version "0.21.0"}
-         ch.qos.logback/logback-classic {:mvn/version "1.4.7"}
+         info.sunng/ring-jetty9-adapter {:mvn/version "0.22.0"}
+         ch.qos.logback/logback-classic {:mvn/version "1.4.8"}
          org.slf4j/slf4j-api            {:mvn/version "2.0.7"}
          metosin/reitit                 {:mvn/version "0.6.0"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
          metosin/malli                  {:mvn/version "0.11.0"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "32edebd490bbf1799be0020d9315ea46c9a84275"}}
+                                         :git/sha "81fa297c99fcdbb2be2801da02276530b43762c7"}}
 
  :aliases
  {:dev
@@ -27,7 +27,7 @@
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.83.1314"}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.85.1342"}
                  clj-http/clj-http   {:mvn/version "3.12.3"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {}}

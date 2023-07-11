@@ -47,8 +47,11 @@
 (defn api-url [endpoint]
   (str "http://localhost:" @api-port "/fluree/" (name endpoint)))
 
-(defn post [endpoint req]
+(defn api-post [endpoint req]
   (http/post (api-url endpoint) (assoc req :throw-exceptions false)))
+
+(defn api-get [endpoint req]
+  (http/get (api-url endpoint) (assoc req :throw-exceptions false)))
 
 (defn create-rand-ledger
   [name-root]
@@ -60,7 +63,7 @@
                                                :foo/name "create-endpoint-test"}]})
         headers     {"Content-Type" "application/edn"
                      "Accept"       "application/edn"}
-        res         (update (post :create {:body req :headers headers})
+        res         (update (api-post :create {:body req :headers headers})
                             :body edn/read-string)]
     (if (= 201 (:status res))
       (get-in res [:body :alias])

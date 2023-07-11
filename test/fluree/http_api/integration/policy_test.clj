@@ -37,7 +37,7 @@
                                     "ex:User" {"id" "ex:alice"}
                                     "f:role"  {"id" "ex:userRole"}}]})
                         :headers json-headers}
-          txn-res      (post :transact txn-req)
+          txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           secret-query {"select" {"?s" ["*"]}
                         "where"  [["?s" "rdf:type" "ex:User"]]}
@@ -49,7 +49,7 @@
                                     :opts {"role" "ex:userRole"
                                            "did"  alice-did})})
                         :headers json-headers}
-          query-res    (post :query query-req)]
+          query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
       (is (= [{"id" "ex:bob", "rdf:type" ["ex:User"]}
@@ -66,14 +66,14 @@
                          :opts   {"role" "ex:userRole"
                                   "did"  alice-did}})
                        :headers json-headers}
-            txn-res   (post :transact txn-req)
+            txn-res   (api-post :transact txn-req)
             _         (assert (= 200 (:status txn-res)))
             query-req {:body
                        (json/write-value-as-string
                         {:ledger ledger-name
                          :query  secret-query})
                        :headers json-headers}
-            query-res (post :query query-req)
+            query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
         (is (= [{"id"        "ex:bob",
                  "rdf:type"  ["ex:User"],
@@ -91,7 +91,7 @@
                          "opts"   {"role" "ex:userRole"
                                    "did"  alice-did}})
                        :headers json-headers}
-              txn-res (post :transact txn-req)]
+              txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))
               (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
           (let [query-req {:body
@@ -102,7 +102,7 @@
                                        "opts"    {"role" "ex:userRole"
                                                   "did"  alice-did}}})
                            :headers json-headers}
-                query-res (post :history query-req)]
+                query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))
                 (str "History query response was: " (pr-str query-res)))
             (is (= [{"id" "ex:bob", "rdf:type" ["ex:User"]}]
@@ -137,7 +137,7 @@
                                     :ex/User :ex/alice
                                     :f/role  :ex/userRole}]})
                         :headers edn-headers}
-          txn-res      (post :transact txn-req)
+          txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           secret-query '{:select {?s [:*]}
                          :where  [[?s :rdf/type :ex/User]]}
@@ -149,7 +149,7 @@
                                     :opts {:role :ex/userRole
                                            :did  alice-did})})
                         :headers edn-headers}
-          query-res    (post :query query-req)]
+          query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
       (is (= [{:id       :ex/bob
@@ -167,14 +167,14 @@
                          :opts   {:role :ex/userRole
                                   :did  alice-did}})
                        :headers edn-headers}
-            txn-res   (post :transact txn-req)
+            txn-res   (api-post :transact txn-req)
             _         (assert (= 200 (:status txn-res)))
             query-req {:body
                        (pr-str
                         {:ledger ledger-name
                          :query  secret-query})
                        :headers edn-headers}
-            query-res (post :query query-req)
+            query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
         (is (= [{:id        :ex/bob
                  :rdf/type  [:ex/User]
@@ -192,7 +192,7 @@
                          :opts   {:role :ex/userRole
                                   :did  alice-did}})
                        :headers edn-headers}
-              txn-res (post :transact txn-req)]
+              txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))
               (str "transaction policy opts should have prevented modification, instead response was:" (pr-str txn-res)))
           (let [query-req {:body
@@ -203,9 +203,9 @@
                                       :opts    {:role :ex/userRole
                                                 :did  alice-did}}})
                            :headers edn-headers}
-                query-res (post :history query-req)]
+                query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))
                 (str "History query response was: " (pr-str query-res)))
             (is (= [{:id :ex/bob :rdf/type [:ex/User]}]
-                   (-> query-res :body edn/read-string first (get :f/assert)))
+                   (-> query-res :body edn/read-string first :f/assert))
                 "policy opts should have prevented seeing bob's secret")))))))

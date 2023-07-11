@@ -16,7 +16,7 @@
                         "txn"            [{"id"      "ex:create-test"
                                            "type"    "foo:test"
                                            "ex:name" "create-endpoint-test"}]})
-          res         (post :create {:body req :headers json-headers})]
+          res         (api-post :create {:body req :headers json-headers})]
       (is (= 201 (:status res)))
       (is (= {"address" address
               "alias"   ledger-name
@@ -32,7 +32,7 @@
                                :txn            [{:id      :ex/create-test
                                                  :type    :foo/test
                                                  :ex/name "create-endpoint-test"}]})
-          res         (post :create {:body req :headers edn-headers})]
+          res         (api-post :create {:body req :headers edn-headers})]
       (is (= 201 (:status res)))
       (is (= {:address address
               :alias   ledger-name
@@ -46,9 +46,9 @@
                                :txn            [{:id      :ex/create-test
                                                  :type    :foo/test
                                                  :ex/name "create-endpoint-test"}]})
-          res-success (post :create {:body req :headers edn-headers})
+          res-success (api-post :create {:body req :headers edn-headers})
           _           (assert (= 201 (:status res-success)))
-          res-fail    (post :create {:body req :headers edn-headers})]
+          res-fail    (api-post :create {:body req :headers edn-headers})]
       (is (= 409 (:status res-fail))))))
 
 (deftest ^:integration ^:json transaction-json-test
@@ -60,7 +60,7 @@
                         "txn"    {"id"      "ex:transaction-test"
                                   "type"    "schema:Test"
                                   "ex:name" "transact-endpoint-json-test"}})
-          res         (post :transact {:body req :headers json-headers})]
+          res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"address" address, "alias" ledger-name, "t" 2}
              (-> res :body json/read-value))))))
@@ -74,7 +74,7 @@
                         :txn    [{:id      :ex/transaction-test
                                   :type    :schema/Test
                                   :ex/name "transact-endpoint-edn-test"}]})
-          res         (post :transact {:body req :headers edn-headers})]
+          res         (api-post :transact {:body req :headers edn-headers})]
       (is (= 200 (:status res)))
       (is (= {:address address, :alias ledger-name, :t 2}
              (-> res :body edn/read-string))))))

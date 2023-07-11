@@ -16,7 +16,7 @@
                                     "type"    "schema:Test"
                                     "ex:name" "query-test"}]})
                        :headers json-headers}
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
@@ -24,7 +24,7 @@
                          "query"  {"select" '{?t ["*"]}
                                    "where"  '[[?t "type" "schema:Test"]]}})
                        :headers json-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
       (is (= [{"id"       "ex:query-test"
                "rdf:type" ["schema:Test"]
@@ -43,7 +43,7 @@
                                     "type"     "schema:Person"
                                     "ex:fname" "Wes"}]})
                        :headers json-headers}
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
@@ -53,7 +53,7 @@
                                                [[[?s "ex:name" ?n]]
                                                 [[?s "ex:fname" ?n]]]}]}})
                        :headers json-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
       (is (= ["query-test" "Wes"]
              (-> query-res :body json/read-value)))))
@@ -79,7 +79,7 @@
                                     "ex:friend"    [{"id" "ex:brian"}
                                                     {"id" "ex:alice"}]}]})
                        :headers json-headers}
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query       {"ledger" ledger-name
                        "query"  '{"select" [?name ?favColor]
@@ -89,7 +89,7 @@
           query-req   {:body
                        (json/write-value-as-string query)
                        :headers json-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Response was: " (pr-str query-res)))
       (is (= [["Cam" nil]
@@ -107,7 +107,7 @@
                                     "type"    "schema:Test"
                                     "ex:name" "query-test"}]})
                        :headers json-headers}
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
@@ -115,7 +115,7 @@
                          "query"  {"selectOne" '{?t ["*"]}
                                    "where"     '[[?t "type" "schema:Test"]]}})
                        :headers json-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
       (is (= {"id"       "ex:query-test"
               "rdf:type" ["schema:Test"]
@@ -174,7 +174,7 @@
                                     {"@type"  "@id"
                                      "@value" "ex:betty"}]}]}}})}
 
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
@@ -183,15 +183,16 @@
                          {"select" ["?name" "?age" "?canVote"]
                           "where"  [["?s" "schema:name" "?name"]
                                     ["?s" "schema:age" "?age"]
-                                    {"bind" {"?canVote" "(>= ?age 18)"}}]}})
+                                    {"bind" {"?canVote" "(>= ?age 18)"}}]
+                          "orderBy" "?name"}})
                        :headers json-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Query response was: " (pr-str query-res)))
-      (is (= [["Freddy" 4 false]
-              ["Leticia" 2 false]
+      (is (= [["Andrew Johnson" 35 true]
               ["Betty" 82 true]
-              ["Andrew Johnson" 35 true]]
+              ["Freddy" 4 false]
+              ["Leticia" 2 false]]
              (-> query-res :body json/read-value))))))
 
 (deftest ^:integration ^:edn query-edn-test
@@ -203,14 +204,14 @@
                                           :type    :schema/Test
                                           :ex/name "query-test"}]})
                        :headers edn-headers}
-          txn-res     (post :transact txn-req)
+          txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (pr-str {:ledger ledger-name
                                 :query  {:select '{?t [:*]}
                                          :where  '[[?t :type :schema/Test]]}})
                        :headers edn-headers}
-          query-res   (post :query query-req)]
+          query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Query response was:" (pr-str query-res)))
       (is (= [{:id       :ex/query-test
