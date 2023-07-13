@@ -125,7 +125,8 @@
   (m/schema [:and
              [:map-of :keyword :any]
              [:map
-              [:ledger LedgerAlias]]]))
+              [:ledger LedgerAlias]
+              [:t {:optional true} TValue]]]))
 
 (def DefaultContextResponseBody Context)
 
