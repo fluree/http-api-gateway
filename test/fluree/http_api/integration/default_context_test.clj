@@ -32,13 +32,12 @@
           default-context-0    (-> default-context-res :body json/read-value)
           update-req           {:body    (json/write-value-as-string
                                           {:ledger ledger-name
-                                           :txn [{:ex/name "Foo"}]
-                                           :opts
-                                           {:defaultContext
-                                            (-> default-context-0
-                                                (assoc "foo-new"
-                                                       (get default-context-0 "foo"))
-                                                (dissoc "foo"))}})
+                                           :txn    [{:ex/name "Foo"}]
+                                           :defaultContext
+                                           (-> default-context-0
+                                               (assoc "foo-new"
+                                                      (get default-context-0 "foo"))
+                                               (dissoc "foo"))})
                                 :headers json-headers}
           update-res           (api-post :transact update-req)
           _                    (assert (= 200 (:status update-res)))

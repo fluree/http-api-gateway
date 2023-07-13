@@ -100,8 +100,7 @@
             {:keys [defaultContext] :as opts} (txn-body->opts body content-type)
 
             opts    (cond-> opts
-                      did (assoc :did did)
-                      defaultContext (dissoc :defaultContext :default-context))
+                      did (assoc :did did))
             db      (fluree/db ledger)
             db      (if defaultContext
                       (do

@@ -68,6 +68,7 @@
              [:map
               [:ledger LedgerAlias]
               [:txn Transaction]
+              [:defaultContext {:optional true} Context]
               [:opts {:optional true} TransactOpts]]]))
 
 (def TransactResponseBody
