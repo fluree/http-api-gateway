@@ -13,12 +13,12 @@
                                :headers json-headers}
           default-context-res (api-get :defaultContext default-context-req)]
       (is (= 200 (:status default-context-res)))
-      (is (= {"ex"     "http://example.com/",
-              "f"      "https://ns.flur.ee/ledger#",
-              "foo"    "http://foobar.com/",
-              "id"     "@id",
-              "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-              "schema" "http://schema.org/",
+      (is (= {"ex"     "http://example.com/"
+              "f"      "https://ns.flur.ee/ledger#"
+              "foo"    "http://foobar.com/"
+              "id"     "@id"
+              "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+              "schema" "http://schema.org/"
               "type"   "@type"}
              (-> default-context-res :body json/read-value))))))
 
