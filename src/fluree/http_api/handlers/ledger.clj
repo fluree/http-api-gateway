@@ -100,8 +100,7 @@
             {:keys [defaultContext] :as opts} (txn-body->opts body content-type)
 
             opts    (cond-> opts
-                      did (assoc :did did)
-                      defaultContext (dissoc :defaultContext :default-context))
+                      did (assoc :did did))
             db      (fluree/db ledger)
             db      (if defaultContext
                       (do
@@ -155,10 +154,12 @@
 
 (def default-context
   (error-catching-handler
-   (fn [{:keys [fluree/conn] {{:keys [ledger] :as body} :body} :parameters}]
+   (fn [{:keys [fluree/conn] {{:keys [ledger t] :as body} :body} :parameters}]
      (log/debug "default-context handler got request:" body)
      (let [ledger* (->> ledger (fluree/load conn) deref!)]
-       (let [results (-> ledger* fluree/db fluree/default-context)]
+       (let [results (if t
+                       (-> ledger* (fluree/default-context-at-t t) deref)
+                       (-> ledger* fluree/db fluree/default-context))]
          (log/debug "default-context for ledger" (str ledger ":") results)
          {:status 200
           :body   results})))))
