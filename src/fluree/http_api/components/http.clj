@@ -88,12 +88,6 @@
              [:select [:sequential [:or coll? map?]]]
              [:select-one [:or coll? map?]]]))
 
-(def MultiQuery
-  (m/schema ::fql/multi-query {:registry fql/registry}))
-
-(def MultiQueryResponse
-  (m/schema [:map-of [:or :string :keyword] QueryResponse]))
-
 (def HistoryQuery
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
             {:registry fqh/registry}))
@@ -102,13 +96,6 @@
   (m/schema [:and
              [:map-of :keyword :any]
              Query]))
-
-(def MultiQueryRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query MultiQuery]]]))
 
 (def HistoryQueryRequestBody
   (m/schema [:and
@@ -150,14 +137,6 @@
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
    :handler    #'ledger/query})
-
-(def multi-query-endpoint
-  {:summary    "Endpoint for submitting multi-queries"
-   :parameters {:body MultiQueryRequestBody}
-   :responses  {200 {:body MultiQueryResponse}
-                400 {:body ErrorResponse}
-                500 {:body ErrorResponse}}
-   :handler    #'ledger/multi-query})
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
@@ -316,9 +295,6 @@
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
-          ["/multi-query"
-           {:get  multi-query-endpoint
-            :post multi-query-endpoint}]
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]

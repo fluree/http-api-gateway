@@ -130,17 +130,6 @@
         {:status 200
          :body   (deref! (fluree/query db query*))}))))
 
-(def multi-query
-  (error-catching-handler
-   (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
-     (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-           opts (cond-> (query-body->opts body content-type)
-                  did (assoc :did did))
-           query* (assoc query :opts opts)]
-       (log/debug "multi-query - Querying ledger" ledger "-" query)
-       {:status 200
-        :body   (deref! (fluree/multi-query db query*))}))))
-
 (def history
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did] {{ledger :from :as query} :body} :parameters}]

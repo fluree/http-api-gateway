@@ -71,27 +71,7 @@
                  "id"       "ex:cred-test"
                  "rdf:type" ["schema:Test"]}]
                (-> query-res :body json/read-value)))))
-    (testing "multi-query"
-      (let [multi-query-req (async/<!! (cred/generate {"ledger" ledger-name
-                                                       "query"  {"test" {"select" {"?t" ["*"]}
-                                                                         "where"  [["?t" "type" "schema:Test"]]}
-                                                                 "subj" {"select" {"?s" ["*"]}
-                                                                         "where"  [["?s" "@id" "ex:cred-test"]]}}}
-                                                      (:private test-utils/auth)))
-            multi-query-res (test-utils/api-post :multi-query {:body (json/write-value-as-string multi-query-req)
-                                                               :headers  test-utils/json-headers})]
-        (is (= 200 (:status multi-query-res)))
-        (is (= {"subj"
-                [{"ex:name"  "cred test",
-                  "ex:foo"   1,
-                  "id"       "ex:cred-test",
-                  "rdf:type" ["schema:Test"]}],
-                "test"
-                [{"ex:name"  "cred test",
-                  "ex:foo"   1,
-                  "id"       "ex:cred-test",
-                  "rdf:type" ["schema:Test"]}]}
-               (-> multi-query-res :body json/read-value)))))
+
     (testing "history"
       (let [history-req (async/<!! (cred/generate {"from"    ledger-name
                                                    "history" "ex:cred-test"
