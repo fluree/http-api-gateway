@@ -80,8 +80,8 @@
               [:address {:optional true} LedgerAddress]
               [:id {:optional true} DID]]]))
 
-(def Query
-  (m/schema ::fql/analytical-query {:registry fql/registry}))
+(def Query (m/schema (fql/query-schema [[:from LedgerAlias]])
+                     {:registry fql/registry}))
 
 (def QueryResponse
   (m/schema [:orn
@@ -95,14 +95,13 @@
   (m/schema [:map-of [:or :string :keyword] QueryResponse]))
 
 (def HistoryQuery
-  (m/schema ::fqh/history-query {:registry fqh/registry}))
+  (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
+            {:registry fqh/registry}))
 
 (def QueryRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query Query]]]))
+             Query]))
 
 (def MultiQueryRequestBody
   (m/schema [:and
@@ -114,9 +113,7 @@
 (def HistoryQueryRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query HistoryQuery]]]))
+             HistoryQuery]))
 
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))

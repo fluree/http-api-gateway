@@ -30,6 +30,7 @@
                              {:status status
                               :body   (assoc error :message msg)}})))))
       (catch Throwable t
+        (prn t)
         (throw (ex-info "Error in ledger handler"
                         {:response {:status 500
                                     :body   {:error (ex-message t)}}}))))))
@@ -51,7 +52,7 @@
       defaultContext (assoc :defaultContext defaultContext))))
 
 (defn query-body->opts
-  [{:keys [query] :as _body} content-type]
+  [query content-type]
   (let [opts (:opts query)
         content-type* (header->content-type content-type)]
     (assoc opts :context-type (content-type->context-type content-type*))))
@@ -117,12 +118,14 @@
 
 (def query
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
-      (log/debug "query handler received body:" body)
+    (fn [{:keys [fluree/conn content-type credential/did] {{ledger :from :as query} :body} :parameters}]
+      (log/debug "query handler received query:" query)
       (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-            opts (cond-> (query-body->opts body content-type)
+            opts (cond-> (query-body->opts query content-type)
                    did (assoc :did did))
-            query* (assoc query :opts opts)]
+            query* (-> query
+                       (assoc :opts opts)
+                       (dissoc :from))]
         (log/debug "query - Querying ledger" ledger "-" query*)
         {:status 200
          :body   (deref! (fluree/query db query*))}))))
@@ -140,12 +143,14 @@
 
 (def history
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type credential/did] {{:keys [ledger query] :as body} :body} :parameters}]
+    (fn [{:keys [fluree/conn content-type credential/did] {{ledger :from :as query} :body} :parameters}]
       (log/debug "history handler got query:" query)
       (let [ledger* (->> ledger (fluree/load conn) deref!)
-            opts (cond-> (query-body->opts body content-type)
+            opts (cond-> (query-body->opts query content-type)
                    did (assoc :did did))
-            query*  (assoc query :opts opts)]
+            query*  (-> query
+                        (dissoc :from)
+                        (assoc :opts opts))]
         (log/debug "history - Querying ledger" ledger "-" query*)
         (let [results (deref! (fluree/history ledger* query*))]
           (log/debug "history - query results:" results)
