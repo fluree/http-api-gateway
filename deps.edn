@@ -11,7 +11,7 @@
          metosin/malli                  {:mvn/version "0.11.0"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "9453aa6216e860d60707be2e9d8e25fd93aebfd0"}}
+                                         :git/sha "8fa25c87c4bb35b71667625a07c880a31a4a06d4"}}
 
  :aliases
  {:dev
