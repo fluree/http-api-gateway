@@ -30,7 +30,6 @@
                              {:status status
                               :body   (assoc error :message msg)}})))))
       (catch Throwable t
-        (prn t)
         (throw (ex-info "Error in ledger handler"
                         {:response {:status 500
                                     :body   {:error (ex-message t)}}}))))))
