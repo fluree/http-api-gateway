@@ -39,15 +39,15 @@
                         :headers json-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
-          secret-query {"select" {"?s" ["*"]}
+          secret-query {"from"   ledger-name
+                        "select" {"?s" ["*"]}
                         "where"  [["?s" "rdf:type" "ex:User"]]}
 
           query-req    {:body
                         (json/write-value-as-string
-                         {:ledger ledger-name
-                          :query  (assoc secret-query
-                                    :opts {"role" "ex:userRole"
-                                           "did"  alice-did})})
+                          (assoc secret-query
+                                 :opts {"role" "ex:userRole"
+                                        "did"  alice-did}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
@@ -70,8 +70,7 @@
             _         (assert (= 200 (:status txn-res)))
             query-req {:body
                        (json/write-value-as-string
-                        {:ledger ledger-name
-                         :query  secret-query})
+                        secret-query)
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
@@ -96,11 +95,11 @@
               (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
           (let [query-req {:body
                            (json/write-value-as-string
-                            {"ledger" ledger-name
-                             "query"  {"history" "ex:bob"
-                                       "t"       {"from" 1}
-                                       "opts"    {"role" "ex:userRole"
-                                                  "did"  alice-did}}})
+                             {"from"    ledger-name
+                              "history" "ex:bob"
+                              "t"       {"from" 1}
+                              "opts"    {"role" "ex:userRole"
+                                         "did"  alice-did}})
                            :headers json-headers}
                 query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))
@@ -139,15 +138,15 @@
                         :headers edn-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
-          secret-query '{:select {?s [:*]}
-                         :where  [[?s :rdf/type :ex/User]]}
+          secret-query {:from    ledger-name
+                        :select '{?s [:*]}
+                        :where  '[[?s :rdf/type :ex/User]]}
 
           query-req    {:body
                         (pr-str
-                         {:ledger ledger-name
-                          :query  (assoc secret-query
-                                    :opts {:role :ex/userRole
-                                           :did  alice-did})})
+                          (assoc secret-query
+                                 :opts {:role :ex/userRole
+                                        :did  alice-did}))
                         :headers edn-headers}
           query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
@@ -171,8 +170,7 @@
             _         (assert (= 200 (:status txn-res)))
             query-req {:body
                        (pr-str
-                        {:ledger ledger-name
-                         :query  secret-query})
+                        secret-query)
                        :headers edn-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
@@ -197,11 +195,11 @@
               (str "transaction policy opts should have prevented modification, instead response was:" (pr-str txn-res)))
           (let [query-req {:body
                            (pr-str
-                            {:ledger ledger-name
-                             :query  {:history :ex/bob
-                                      :t       {:from 1}
-                                      :opts    {:role :ex/userRole
-                                                :did  alice-did}}})
+                             {:from    ledger-name
+                              :history :ex/bob
+                              :t       {:from 1}
+                              :opts    {:role :ex/userRole
+                                        :did  alice-did}})
                            :headers edn-headers}
                 query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))

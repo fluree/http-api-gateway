@@ -80,43 +80,27 @@
               [:address {:optional true} LedgerAddress]
               [:id {:optional true} DID]]]))
 
-(def Query
-  (m/schema ::fql/analytical-query {:registry fql/registry}))
+(def Query (m/schema (fql/query-schema [[:from LedgerAlias]])
+                     {:registry fql/registry}))
 
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
              [:select-one [:or coll? map?]]]))
 
-(def MultiQuery
-  (m/schema ::fql/multi-query {:registry fql/registry}))
-
-(def MultiQueryResponse
-  (m/schema [:map-of [:or :string :keyword] QueryResponse]))
-
 (def HistoryQuery
-  (m/schema ::fqh/history-query {:registry fqh/registry}))
+  (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
+            {:registry fqh/registry}))
 
 (def QueryRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query Query]]]))
-
-(def MultiQueryRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query MultiQuery]]]))
+             Query]))
 
 (def HistoryQueryRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:query HistoryQuery]]]))
+             HistoryQuery]))
 
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
@@ -153,14 +137,6 @@
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
    :handler    #'ledger/query})
-
-(def multi-query-endpoint
-  {:summary    "Endpoint for submitting multi-queries"
-   :parameters {:body MultiQueryRequestBody}
-   :responses  {200 {:body MultiQueryResponse}
-                400 {:body ErrorResponse}
-                500 {:body ErrorResponse}}
-   :handler    #'ledger/multi-query})
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
@@ -319,9 +295,6 @@
           ["/query"
            {:get  query-endpoint
             :post query-endpoint}]
-          ["/multi-query"
-           {:get  multi-query-endpoint
-            :post multi-query-endpoint}]
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]

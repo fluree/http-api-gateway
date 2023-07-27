@@ -40,9 +40,9 @@
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (json/write-value-as-string
-                          {"ledger" ledger-name
-                           "query"  {"commit-details" true
-                                     "t"              {"at" "latest"}}})
+                           {"from"           ledger-name
+                            "commit-details" true
+                            "t"              {"at" "latest"}})
                          :headers json-headers}
           query-res     (api-post :history query-req)
           query-results (-> query-res :body json/read-value)]
@@ -97,9 +97,9 @@
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (pr-str
-                          {:ledger ledger-name
-                           :query  {:commit-details true
-                                    :t              {:from 1}}})
+                           {:from           ledger-name
+                            :commit-details true
+                            :t              {:from 1}})
                          :headers edn-headers}
           query-res     (api-post :history query-req)
           query-results (-> query-res :body edn/read-string)]
