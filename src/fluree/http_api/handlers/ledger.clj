@@ -96,21 +96,10 @@
                                    "exists; loading it")
                         (deref! (fluree/load conn ledger)))
                       (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-
             {:keys [defaultContext] :as opts} (txn-body->opts body content-type)
-
             opts    (cond-> opts
                       did (assoc :did did))
-            db      (fluree/db ledger)
-            db      (if defaultContext
-                      (do
-                        (log/trace "Updating default context to:" defaultContext)
-                        (fluree/update-default-context db defaultContext))
-                      db)
-            db      (-> db
-                        (fluree/stage txn opts)
-                        deref!
-                        (->> (fluree/commit! ledger))
+            db      (-> (fluree/transact! ledger txn opts)
                         deref!)]
         {:status 200
          :body   (ledger-summary db)}))))
