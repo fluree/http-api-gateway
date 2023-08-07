@@ -26,9 +26,9 @@
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
-      (is (= [{"id"       "ex:query-test"
-               "rdf:type" ["schema:Test"]
-               "ex:name"  "query-test"}]
+      (is (= [{"id"      "ex:query-test"
+               "type"    "schema:Test"
+               "ex:name" "query-test"}]
              (-> query-res :body json/read-value)))))
 
   (testing "union query works"
@@ -117,9 +117,9 @@
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
-      (is (= {"id"       "ex:query-test"
-              "rdf:type" ["schema:Test"]
-              "ex:name"  "query-test"}
+      (is (= {"id"      "ex:query-test"
+              "type"    "schema:Test"
+              "ex:name" "query-test"}
              (-> query-res :body json/read-value)))))
 
   (testing "bind query works"
@@ -214,7 +214,7 @@
       (println "Q" query-req)
       (is (= 200 (:status query-res))
           (str "Query response was:" (pr-str query-res)))
-      (is (= [{:id       :ex/query-test
-               :rdf/type [:schema/Test]
-               :ex/name  "query-test"}]
+      (is (= [{:id      :ex/query-test
+               :type    :schema/Test
+               :ex/name "query-test"}]
              (-> query-res :body edn/read-string))))))

@@ -69,7 +69,7 @@
         (is (= [{"ex:name"  "cred test",
                  "ex:foo"   1,
                  "id"       "ex:cred-test"
-                 "rdf:type" ["schema:Test"]}]
+                 "type" "schema:Test"}]
                (-> query-res :body json/read-value)))))
 
     (testing "history"
@@ -86,7 +86,7 @@
                  [{"ex:name" "cred test",
                    "ex:foo" 1,
                    "id" "ex:cred-test",
-                   "rdf:type" ["schema:Test"]}],
+                   "type" "schema:Test"}],
                  "f:t" 2}]
                (-> history-res :body json/read-value)))))
 
