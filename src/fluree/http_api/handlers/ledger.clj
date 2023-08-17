@@ -88,18 +88,11 @@
 (def transact
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did]
-          {{:keys [ledger txn] :as body} :body} :parameters}]
-      (println "\nTransacting to" ledger ":" (pr-str txn))
-      (let [ledger  (if (deref! (fluree/exists? conn ledger))
-                      (do
-                        (log/debug "transact - Ledger" ledger
-                                   "exists; loading it")
-                        (deref! (fluree/load conn ledger)))
-                      (throw (ex-info "Ledger does not exist" {:ledger ledger})))
-            {:keys [defaultContext] :as opts} (txn-body->opts body content-type)
+          {:keys [body]} :parameters}]
+      (let [{:keys [defaultContext] :as opts} (txn-body->opts body content-type)
             opts    (cond-> opts
                       did (assoc :did did))
-            db      (-> (fluree/transact! ledger txn opts)
+            db      (-> (fluree/transact! conn body opts)
                         deref!)]
         {:status 200
          :body   (ledger-summary db)}))))

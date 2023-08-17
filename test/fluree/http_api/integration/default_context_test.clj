@@ -22,6 +22,7 @@
               "type"   "@type"}
              (-> default-context-res :body json/read-value)))))
 
+  ;;TODO: "defaultContext" key
   (testing "can retrieve default context at a specific t"
     (let [ledger-name          (create-rand-ledger "get-default-context-test")
           default-context-req  {:body    (json/write-value-as-string
@@ -39,19 +40,19 @@
                                    (dissoc "foo"))
           txn0-req             {:body
                                 (json/write-value-as-string
-                                 {:ledger         ledger-name
-                                  :txn            [{"id"      "ex:nobody"
-                                                    "ex:name" "Nobody"}]
-                                  :defaultContext default-context1})
+                                  {"@id"             ledger-name
+                                   "@graph"          [{"id"      "ex:nobody"
+                                                       "ex:name" "Nobody"}]
+                                   "defaultContext" default-context1})
                                 :headers json-headers}
           txn0-res             (api-post :transact txn0-req)
-          _                    (assert (= 200 (:status txn0-res)))
+          _                    (assert (= 200 (:status txn0-res)) (str "result was " txn0-res))
           txn1-req             {:body
                                 (json/write-value-as-string
-                                 {:ledger         ledger-name
-                                  :txn            [{"id"      "ex:somebody"
-                                                    "ex:name" "Somebody"}]
-                                  :defaultContext default-context2})
+                                  {"@id"             ledger-name
+                                   "@graph"          [{"id"      "ex:somebody"
+                                                       "ex:name" "Somebody"}]
+                                   "defaultContext" default-context2})
                                 :headers json-headers}
           txn1-res             (api-post :transact txn1-req)
           _                    (assert (= 200 (:status txn1-res)))
@@ -95,6 +96,7 @@
               "type"    "@type"}
              (-> default-context3-res :body json/read-value))))))
 
+;;TODO: "defaultContext" key
 (deftest ^:integration update-default-context-test
   (testing "can update default context for a ledger"
     (let [ledger-name          (create-rand-ledger "get-default-context-test")
@@ -104,16 +106,16 @@
           default-context-res  (api-get :defaultContext default-context-req)
           default-context-0    (-> default-context-res :body json/read-value)
           update-req           {:body    (json/write-value-as-string
-                                          {:ledger ledger-name
-                                           :txn    [{:ex/name "Foo"}]
-                                           :defaultContext
-                                           (-> default-context-0
-                                               (assoc "foo-new"
-                                                      (get default-context-0 "foo"))
-                                               (dissoc "foo"))})
+                                           {"@id" ledger-name
+                                            "@graph"    [{:ex/name "Foo"}]
+                                            "defaultContext"
+                                            (-> default-context-0
+                                                (assoc "foo-new"
+                                                       (get default-context-0 "foo"))
+                                                (dissoc "foo"))})
                                 :headers json-headers}
           update-res           (api-post :transact update-req)
-          _                    (assert (= 200 (:status update-res)))
+          _                    (assert (= 200 (:status update-res)) (str "result was " update-res))
           default-context-res' (api-get :defaultContext default-context-req)
           default-context-1    (-> default-context-res' :body json/read-value)]
       (is (= 200 (:status update-res)))
