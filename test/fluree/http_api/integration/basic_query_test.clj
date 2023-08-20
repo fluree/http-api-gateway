@@ -198,7 +198,9 @@
   (testing "can query a basic entity w/ EDN"
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
-                       (pr-str {:id ledger-name
+                       (pr-str {:context {:id "@id"
+                                          :graph "@graph"}
+                                :id ledger-name
                                 :graph    [{:id      :ex/query-test
                                             :type    :schema/Test
                                             :ex/name "query-test"}]})

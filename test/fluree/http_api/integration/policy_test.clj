@@ -60,11 +60,12 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
+                         {"@context" {"f" "https://ns.flur.ee/ledger#" }
+                          "@id" ledger-name
                           "@graph" [{"id"        "ex:alice"
                                      "ex:secret" "alice's NEW secret"}]
-                          "opts"   {"role" "ex:userRole"
-                                    "did"  alice-did}})
+                          "f:opts"   {"role" "ex:userRole"
+                                      "did"  alice-did}})
                        :headers json-headers}
             txn-res   (api-post :transact txn-req)
             _         (assert (= 200 (:status txn-res)))
@@ -84,15 +85,18 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
+                         {"@context" {"f" "https://ns.flur.ee/ledger#" }
+                          "@id" ledger-name
                           "@graph"    [{"id"        "ex:bob"
                                         "ex:secret" "bob's new secret"}]
-                          "opts"   {"role" "ex:userRole"
-                                    "did"  alice-did}})
+                          "f:opts"   {"role" "ex:userRole"
+                                      "did"  alice-did}})
                        :headers json-headers}
               txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))
               (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
+          (is (= "db/policy-exception"
+                (-> txn-res :body json/read-value (get "error"))))
           (let [query-req {:body
                            (json/write-value-as-string
                              {"from"    ledger-name
@@ -115,7 +119,9 @@
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (pr-str
-                          {:id ledger-name
+                          {:context {:id "@id"
+                                     :graph "@graph"}
+                           :id ledger-name
                            :graph    [{:id        :ex/alice,
                                        :type      :ex/User,
                                        :ex/secret "alice's secret"}
@@ -161,14 +167,17 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (pr-str
-                         {:id ledger-name
+                         {:context {:id    "@id"
+                                    :graph "@graph"
+                                    :f     "https://ns.flur.ee/ledger#"}
+                          :id ledger-name
                           :graph    [{:id        :ex/alice
                                       :ex/secret "alice's NEW secret"}]
-                          :opts   {:role :ex/userRole
-                                   :did  alice-did}})
+                          :f/opts   {:role :ex/userRole
+                                     :did  alice-did}})
                        :headers edn-headers}
             txn-res   (api-post :transact txn-req)
-            _         (assert (= 200 (:status txn-res)))
+            _         (assert (= 200 (:status txn-res)) (str "response was" txn-res))
             query-req {:body
                        (pr-str
                         secret-query)
@@ -185,15 +194,20 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (pr-str
-                         {:id ledger-name
-                          :graph    [{:id        :ex/bob
-                                      :ex/secret "bob's NEW secret"}]
-                          :opts   {:role :ex/userRole
-                                   :did  alice-did}})
+                         {:context {:id    "@id"
+                                    :graph "@graph"
+                                    :f     "https://ns.flur.ee/ledger#"}
+                          :id      ledger-name
+                          :graph   [{:id        :ex/bob
+                                     :ex/secret "bob's NEW secret"}]
+                          :f/opts    {:role :ex/userRole
+                                      :did  alice-did}})
                        :headers edn-headers}
               txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))
               (str "transaction policy opts should have prevented modification, instead response was:" (pr-str txn-res)))
+          (is (= :db/policy-exception
+                 (-> txn-res :body edn/read-string :error)))
           (let [query-req {:body
                            (pr-str
                              {:from    ledger-name

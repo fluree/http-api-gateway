@@ -89,8 +89,7 @@
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did]
           {:keys [body]} :parameters}]
-      (let [{:keys [defaultContext] :as opts} (txn-body->opts body content-type)
-            opts    (cond-> opts
+      (let [opts    (cond-> (txn-body->opts nil content-type)
                       did (assoc :did did))
             db      (-> (fluree/transact! conn body opts)
                         deref!)]

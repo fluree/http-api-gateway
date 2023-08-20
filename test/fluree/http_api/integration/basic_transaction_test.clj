@@ -112,7 +112,9 @@
       (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
             address     (str "fluree:memory://" ledger-name "/main/head")
             req         (pr-str
-                          {:id ledger-name
+                          {:context {:id "@id"
+                                     :graph "@graph"}
+                           :id ledger-name
                            :graph    [{:id      :ex/transaction-test
                                        :type    :schema/Test
                                        :ex/name "transact-endpoint-edn-test"}]})
