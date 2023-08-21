@@ -44,17 +44,17 @@
   [ct]
   (if (= :json ct) :string :keyword))
 
-(defn txn-body->opts
-  [{:keys [defaultContext opts] :as _body} content-type]
-  (let [content-type* (header->content-type content-type)]
-    (cond-> (assoc opts :context-type (content-type->context-type content-type*))
-      defaultContext (assoc :defaultContext defaultContext))))
-
 (defn query-body->opts
   [query content-type]
   (let [opts (:opts query)
         content-type* (header->content-type content-type)]
     (assoc opts :context-type (content-type->context-type content-type*))))
+
+(defn opts->context-type
+  [opts content-type]
+  (let [content-type* (header->content-type content-type)]
+    (assoc opts :context-type (content-type->context-type content-type*))))
+
 
 (defn ledger-summary
   [db]
@@ -64,7 +64,7 @@
 (def create
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did]
-          {{:keys [ledger txn] :as body} :body} :parameters}]
+          {{:keys [ledger txn defaultContext opts] :as body} :body} :parameters}]
       (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
         (log/debug "Ledger" ledger "exists?" ledger-exists?)
         (if ledger-exists?
@@ -72,13 +72,14 @@
             (throw (ex-info err-message
                             {:response {:status 409
                                         :body   {:error err-message}}})))
-          (let [opts    (cond-> (txn-body->opts body content-type)
-                          did (assoc :did did))
-                _       (log/info "Creating ledger" ledger opts)
-                ledger* (deref! (fluree/create conn ledger opts))
+          (let [opts*    (cond-> (opts->context-type opts content-type)
+                           defaultContext (assoc :defaultContext defaultContext)
+                           did (assoc :did did))
+                _       (log/info "Creating ledger" ledger opts*)
+                ledger* (deref! (fluree/create conn ledger opts*))
                 db      (-> ledger*
                             fluree/db
-                            (fluree/stage txn opts)
+                            (fluree/stage txn opts*)
                             deref!
                             (->> (fluree/commit! ledger*))
                             deref!)]
@@ -89,7 +90,7 @@
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did]
           {:keys [body]} :parameters}]
-      (let [opts    (cond-> (txn-body->opts nil content-type)
+      (let [opts    (cond-> (opts->context-type {} content-type)
                       did (assoc :did did))
             db      (-> (fluree/transact! conn body opts)
                         deref!)]
