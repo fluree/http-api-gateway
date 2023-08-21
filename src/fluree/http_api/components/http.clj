@@ -63,14 +63,7 @@
               [:id {:optional true} DID]]]))
 
 (def TransactRequestBody
-  (m/schema [:map-of :any :any]
-            #_[:and
-               [:map-of :keyword :any]
-               [:map
-                [:ledger LedgerAlias]
-                [:txn Transaction]
-                [:defaultContext {:optional true} Context]
-                [:opts {:optional true} TransactOpts]]]))
+  (m/schema [:map-of :any :any]))
 
 (def TransactResponseBody
   (m/schema [:and
