@@ -5,7 +5,7 @@
             [jsonista.core :as json]))
 
 (use-fixtures :once run-test-server)
-;;TODO: opts key
+
 (deftest ^:integration ^:json policy-opts-json-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
@@ -112,7 +112,6 @@
                    (-> query-res :body json/read-value first (get "f:assert")))
                 "policy opts should have prevented seeing bob's secret")))))))
 
-;;TODO: opts key
 (deftest ^:integration ^:edn policy-opts-edn-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")

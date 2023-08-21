@@ -22,7 +22,6 @@
               "type"   "@type"}
              (-> default-context-res :body json/read-value)))))
 
-  ;;TODO: "defaultContext" key
   (testing "can retrieve default context at a specific t"
     (let [ledger-name          (create-rand-ledger "get-default-context-test")
           default-context-req  {:body    (json/write-value-as-string
@@ -99,7 +98,6 @@
               "type"    "@type"}
              (-> default-context3-res :body json/read-value))))))
 
-;;TODO: "defaultContext" key
 (deftest ^:integration update-default-context-test
   (testing "can update default context for a ledger"
     (let [ledger-name          (create-rand-ledger "get-default-context-test")
