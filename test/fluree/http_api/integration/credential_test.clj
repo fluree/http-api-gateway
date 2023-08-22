@@ -45,11 +45,11 @@
                (-> create-res :body json/read-value)))))
     (testing "transact"
       (let [txn-req (async/<!! (cred/generate
-                                 {"ledger" ledger-name
-                                  "txn"    [{"id"      "ex:cred-test"
-                                             "type"    "schema:Test"
-                                             "ex:name" "cred test"
-                                             "ex:foo"  1}]}
+                                 {"@id" ledger-name
+                                  "@graph"    [{"id"      "ex:cred-test"
+                                                "type"    "schema:Test"
+                                                "ex:name" "cred test"
+                                                "ex:foo"  1}]}
                                  (:private test-utils/auth)))
             txn-res (test-utils/api-post :transact {:body (json/write-value-as-string txn-req)
                                                     :headers  test-utils/json-headers})]
@@ -69,7 +69,7 @@
         (is (= [{"ex:name"  "cred test",
                  "ex:foo"   1,
                  "id"       "ex:cred-test"
-                 "rdf:type" ["schema:Test"]}]
+                 "type" "schema:Test"}]
                (-> query-res :body json/read-value)))))
 
     (testing "history"
@@ -86,7 +86,7 @@
                  [{"ex:name" "cred test",
                    "ex:foo" 1,
                    "id" "ex:cred-test",
-                   "rdf:type" ["schema:Test"]}],
+                   "type" "schema:Test"}],
                  "f:t" 2}]
                (-> history-res :body json/read-value)))))
 
