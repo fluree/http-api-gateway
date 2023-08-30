@@ -11,10 +11,10 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
-                          "@graph"    [{"id"      "ex:query-test"
-                                        "type"    "schema:Test"
-                                        "ex:name" "query-test"}]})
+                         {"@id"    ledger-name
+                          "@graph" [{"id"      "ex:query-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "query-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -213,7 +213,6 @@
                                 :where  '[[?t :type :schema/Test]]})
                        :headers edn-headers}
           query-res   (api-post :query query-req)]
-      (println "Q" query-req)
       (is (= 200 (:status query-res))
           (str "Query response was:" (pr-str query-res)))
       (is (= [{:id      :ex/query-test
