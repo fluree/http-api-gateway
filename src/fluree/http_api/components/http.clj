@@ -20,7 +20,8 @@
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
    [ring.adapter.jetty9 :as http]
-   [ring.middleware.cors :as rmc]))
+   [ring.middleware.cors :as rmc])
+  (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
 
@@ -74,8 +75,12 @@
               [:address {:optional true} LedgerAddress]
               [:id {:optional true} DID]]]))
 
-(def Query (m/schema (fql/query-schema [[:from LedgerAlias]])
-                     {:registry fql/registry}))
+(def FqlQuery (m/schema [:and
+                         [:map-of :keyword :any]
+                         (fql/query-schema [[:from LedgerAlias]])]
+                        {:registry fql/registry}))
+
+(def SparqlQuery (m/schema :string))
 
 (def QueryResponse
   (m/schema [:orn
@@ -86,10 +91,15 @@
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
             {:registry fqh/registry}))
 
+(def QueryFormat
+  (m/schema [:enum :sparql]))
+
 (def QueryRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             Query]))
+  (m/schema [:multi {:dispatch ::format}
+             [:sparql [:map
+                       [::query SparqlQuery]
+                       [::format QueryFormat]]]
+             [::m/default FqlQuery]]))
 
 (def HistoryQueryRequestBody
   (m/schema [:and
@@ -194,6 +204,17 @@
     :matches #"^application/(.+\+)?json$" ; match application/ld+json too
     :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
     :encoder [mfj/encoder]}))
+
+(def sparql-format
+  (mf/map->Format
+   {:name "application/sparql-query"
+    :decoder [(fn [_]
+                (reify
+                  mf/Decode
+                  (decode [_ data charset]
+                    {::query  (String. (.readAllBytes ^InputStream data)
+                                       ^String charset)
+                     ::format :sparql})))]}))
 
 (defn websocket-handler
   [upgrade-request]
@@ -302,10 +323,13 @@
         {:data {:coercion   (reitit.coercion.malli/create
                              {:strip-extra-keys false})
                 :muuntaja   (muuntaja/create
-                             (assoc-in
-                              muuntaja/default-options
-                              [:formats "application/json"]
-                              json-format))
+                             (-> muuntaja/default-options
+                                 (assoc-in
+                                  [:formats "application/json"]
+                                  json-format)
+                                 (assoc-in
+                                  [:formats "application/sparql-query"]
+                                  sparql-format)))
                 :middleware [swagger/swagger-feature
                              muuntaja-mw/format-negotiate-middleware
                              muuntaja-mw/format-response-middleware
