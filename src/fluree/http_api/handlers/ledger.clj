@@ -103,14 +103,14 @@
     (fn [{:keys [fluree/conn content-type credential/did]
           {:keys [body]} :parameters}]
       (let [query  (or (::http/query body) body)
-            format (or (::http/format body) :fql)]
-        (log/debug "query handler received query:" query)
-        (let [opts   (when (= :fql format)
-                       (cond-> (query-body->opts query content-type)
-                         did (assoc :did did)))
-              query* (if opts (assoc query :opts opts) query)]
-          {:status 200
-           :body   (deref! (fluree/from-query conn query* {:format format}))})))))
+            format (or (::http/format body) :fql)
+            _      (log/debug "query handler received query:" query)
+            opts   (when (= :fql format)
+                     (cond-> (query-body->opts query content-type)
+                       did (assoc :did did)))
+            query* (if opts (assoc query :opts opts) query)]
+        {:status 200
+         :body   (deref! (fluree/from-query conn query* {:format format}))}))))
 
 (def history
   (error-catching-handler
