@@ -13,6 +13,7 @@
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
                                          :git/sha "df7b44dd02f6b7f8a395e56fb4e7c27e9fb9ee3a"}}
 
+
  :aliases
  {:dev
   {:extra-paths ["dev/src" "test"]
