@@ -23,8 +23,8 @@
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
                          (json/write-value-as-string
-                          {"ledger" ledger-name
-                           "txn"    [{"id"      "ex:query-test"
+                          {"@id"    ledger-name
+                           "@graph" [{"id"      "ex:query-test"
                                       "type"    "schema:Test"
                                       "ex:name" "query-test"}]})
                          :headers json-headers}
@@ -80,10 +80,10 @@
     (let [ledger-name   "history-query-edn-test"
           txn-req       {:body
                          (pr-str
-                          {:ledger ledger-name
-                           :txn    [{:id      :ex/query-test
-                                     :type    :schema/Test
-                                     :ex/name "query-test"}]})
+                          {:id    ledger-name
+                           :graph [{:id      :ex/query-test
+                                    :type    :schema/Test
+                                    :ex/name "query-test"}]})
                          :headers edn-headers}
           txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))

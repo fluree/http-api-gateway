@@ -60,11 +60,11 @@
 (defn create-rand-ledger
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
-        req         (pr-str {:ledger         ledger-name
-                             :defaultContext ["" {:foo "http://foobar.com/"}]
-                             :txn            [{:id       :foo/create-test
-                                               :type     :foo/test
-                                               :foo/name "create-endpoint-test"}]})
+        req         (pr-str {:id      ledger-name
+                             :context ["" {:foo "http://foobar.com/"}]
+                             :graph   [{:id       :foo/create-test
+                                        :type     :foo/test
+                                        :foo/name "create-endpoint-test"}]})
         headers     {"Content-Type" "application/edn"
                      "Accept"       "application/edn"}
         res         (update (api-post :create {:body req :headers headers})

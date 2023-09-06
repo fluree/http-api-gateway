@@ -25,17 +25,17 @@
   (let [ledger-name "credential-test"]
     (testing "create"
       ;; cannot transact without roles already defined
-      (let [create-req  {"ledger" ledger-name
-                         "defaultContext" default-context
-                         "txn"    [{"id"      (:id test-utils/auth)
-                                    "f:role"  {"id" "role:root"}
-                                    "type"    "schema:Person"
-                                    "ex:name" "Goose"}
-                                   {"id" "ex:rootPolicy"
-                                    "type" "f:Policy"
-                                    "f:targetNode" {"id" "f:allNodes"}
-                                    "f:allow" [{"f:targetRole" {"id" "role:root"}
-                                                "f:action" [{"id" "f:view"} {"id" "f:modify"}]}]}]}
+      (let [create-req  {"@id"      ledger-name
+                         "@context" default-context
+                         "@graph"   [{"id"      (:id test-utils/auth)
+                                      "f:role"  {"id" "role:root"}
+                                      "type"    "schema:Person"
+                                      "ex:name" "Goose"}
+                                     {"id" "ex:rootPolicy"
+                                      "type" "f:Policy"
+                                      "f:targetNode" {"id" "f:allNodes"}
+                                      "f:allow" [{"f:targetRole" {"id" "role:root"}
+                                                  "f:action" [{"id" "f:view"} {"id" "f:modify"}]}]}]}
             create-res  (test-utils/api-post :create {:body (json/write-value-as-string create-req)
                                                       :headers  test-utils/json-headers})]
         (is (= 201 (:status create-res)))
