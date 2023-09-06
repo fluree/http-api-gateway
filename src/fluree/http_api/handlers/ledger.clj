@@ -3,7 +3,8 @@
    [clojure.string :as str]
    [fluree.db.json-ld.api :as fluree]
    [fluree.db.util.core :as util]
-   [fluree.db.util.log :as log])
+   [fluree.db.util.log :as log]
+   [fluree.http-api.components.http :as-alias http])
   (:import (clojure.lang ExceptionInfo)))
 
 (defn deref!
@@ -99,17 +100,17 @@
 
 (def query
   (error-catching-handler
-    (fn [{:keys [fluree/conn content-type credential/did] {{ledger :from :as query} :body} :parameters}]
-      (log/debug "query handler received query:" query)
-      (let [db     (->> ledger (fluree/load conn) deref! fluree/db)
-            opts (cond-> (query-body->opts query content-type)
-                   did (assoc :did did))
-            query* (-> query
-                       (assoc :opts opts)
-                       (dissoc :from))]
-        (log/debug "query - Querying ledger" ledger "-" query*)
+    (fn [{:keys [fluree/conn content-type credential/did]
+          {:keys [body]} :parameters}]
+      (let [query  (or (::http/query body) body)
+            format (or (::http/format body) :fql)
+            _      (log/debug "query handler received query:" query)
+            opts   (when (= :fql format)
+                     (cond-> (query-body->opts query content-type)
+                       did (assoc :did did)))
+            query* (if opts (assoc query :opts opts) query)]
         {:status 200
-         :body   (deref! (fluree/query db query*))}))))
+         :body   (deref! (fluree/from-query conn query* {:format format}))}))))
 
 (def history
   (error-catching-handler

@@ -13,6 +13,10 @@
   {"Content-Type" "application/edn"
    "Accept"       "application/edn"})
 
+(def sparql-headers
+  {"Content-Type" "application/sparql-query"
+   "Accept"       "application/json"})
+
 (defn find-open-port
   ([] (find-open-port nil))
   ([_] ; so it can be used in swap!
