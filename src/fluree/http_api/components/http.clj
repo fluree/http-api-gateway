@@ -232,7 +232,6 @@
       (mt/transformer {:name :edn})
       (when default-values (mt/default-value-transformer))))))
 
->>>>>>> 9cdb7d5 (Use @id, @graph, @context in /create endpoint too)
 (defn websocket-handler
   [upgrade-request]
   ;; Mostly copy-pasta from
