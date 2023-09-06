@@ -65,19 +65,24 @@
 (def create
   (error-catching-handler
     (fn [{:keys [fluree/conn content-type credential/did]
-          {{:keys [ledger txn defaultContext opts] :as body} :body} :parameters}]
-      (let [ledger-exists? (deref! (fluree/exists? conn ledger))]
+          {:keys [body]} :parameters}]
+      (log/debug "create body:" body)
+      (let [ledger         (get body "@id")
+            ledger-exists? (deref! (fluree/exists? conn ledger))]
         (log/debug "Ledger" ledger "exists?" ledger-exists?)
         (if ledger-exists?
           (let [err-message (str "Ledger " ledger " already exists")]
             (throw (ex-info err-message
                             {:response {:status 409
                                         :body   {:error err-message}}})))
-          (let [opts*    (cond-> (opts->context-type opts content-type)
-                           defaultContext (assoc :defaultContext defaultContext)
-                           did (assoc :did did))
+          (let [default-context (get body "@context")
+                opts            (:opts body)
+                opts*           (cond-> (opts->context-type opts content-type)
+                                  default-context (assoc :defaultContext default-context)
+                                  did (assoc :did did))
                 _       (log/info "Creating ledger" ledger opts*)
                 ledger* (deref! (fluree/create conn ledger opts*))
+                txn     (get body "@graph")
                 db      (-> ledger*
                             fluree/db
                             (fluree/stage txn opts*)
