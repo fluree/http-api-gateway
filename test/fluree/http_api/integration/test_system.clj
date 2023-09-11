@@ -36,6 +36,7 @@
                             {:context
                              {:id     "@id"
                               :type   "@type"
+                              :graph  "@graph"
                               :ex     "http://example.com/"
                               :schema "http://schema.org/"
                               :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -60,11 +61,11 @@
 (defn create-rand-ledger
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
-        req         (pr-str {:id      ledger-name
-                             :context ["" {:foo "http://foobar.com/"}]
-                             :graph   [{:id       :foo/create-test
-                                        :type     :foo/test
-                                        :foo/name "create-endpoint-test"}]})
+        req         (pr-str {:id               ledger-name
+                             :f/defaultContext ["" {:foo "http://foobar.com/"}]
+                             :graph            [{:id       :foo/create-test
+                                                 :type     :foo/test
+                                                 :foo/name "create-endpoint-test"}]})
         headers     {"Content-Type" "application/edn"
                      "Accept"       "application/edn"}
         res         (update (api-post :create {:body req :headers headers})
@@ -74,6 +75,6 @@
       (throw (ex-info "Error creating random ledger" res)))))
 
 (def auth
-  {:id "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
-   :public "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
+  {:id      "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
+   :public  "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
    :private "509553eece84d5a410f1012e8e19e84e938f226aa3ad144e2d12f36df0f51c1e"})

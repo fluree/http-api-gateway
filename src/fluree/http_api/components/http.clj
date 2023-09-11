@@ -41,20 +41,8 @@
 (def Context
   (m/schema ::fql/context {:registry fql/registry}))
 
-(defn edn-req->json-req
-  [req]
-  (log/trace "edn-req->json-req got:" req)
-  (if (and (contains? req :id) (contains? req :graph))
-    (cond-> {"@id"    (:id req)
-             "@graph" (:graph req)}
-            (contains? req :context) (assoc "@context" (:context req)))
-    req))
-
 (def CreateRequestBody
-  (m/schema [:map {:decode/edn edn-req->json-req}
-             ["@id" LedgerAlias]
-             ["@graph" Transaction]
-             ["@context" {:optional true} Context]]))
+  (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
 
 (def TValue
   (m/schema pos-int?))
@@ -224,14 +212,6 @@
                                        ^String charset)
                      ::format :sparql})))]}))
 
-(def edn-transformer-provider
-  (reify rcm/TransformationProvider
-    (-transformer [_ {:keys [strip-extra-keys default-values]}]
-     (mt/transformer
-      (when strip-extra-keys (mt/strip-extra-keys-transformer))
-      (mt/transformer {:name :edn})
-      (when default-values (mt/default-value-transformer))))))
-
 (defn websocket-handler
   [upgrade-request]
   ;; Mostly copy-pasta from
@@ -337,11 +317,7 @@
                                500 {:body ErrorResponse}}
                   :handler    #'ledger/default-context}}]]]
        {:data {:coercion   (rcm/create
-                            (-> rcm/default-options
-                                (assoc :strip-extra-keys false)
-                                (assoc-in [:transformers :body :formats
-                                           "application/edn"]
-                                          edn-transformer-provider)))
+                            {:strip-extra-keys false})
                :muuntaja   (muuntaja/create
                             (-> muuntaja/default-options
                                 (assoc-in

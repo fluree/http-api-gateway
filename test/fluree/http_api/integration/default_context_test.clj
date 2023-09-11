@@ -19,7 +19,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context-res :body json/read-value)))))
 
   (testing "can retrieve default context at a specific t"
@@ -39,7 +40,7 @@
                                    (dissoc "foo"))
           txn0-req             {:body
                                 (json/write-value-as-string
-                                  {"@context"       {"f" "https://ns.flur.ee/ledger#" }
+                                  {"@context"       {"f" "https://ns.flur.ee/ledger#"}
                                    "@id"            ledger-name
                                    "@graph"         [{"id"      "ex:nobody"
                                                       "ex:name" "Nobody"}]
@@ -49,7 +50,7 @@
           _                    (assert (= 200 (:status txn0-res)) (str "result was " txn0-res))
           txn1-req             {:body
                                 (json/write-value-as-string
-                                  {"@context" {"f" "https://ns.flur.ee/ledger#" }
+                                  {"@context" {"f" "https://ns.flur.ee/ledger#"}
 
                                    "@id"              ledger-name
                                    "@graph"           [{"id"      "ex:somebody"
@@ -79,7 +80,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context1-res :body json/read-value)))
       (is (= {"ex-new" "http://example.com/"
               "f"      "https://ns.flur.ee/ledger#"
@@ -87,7 +89,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context2-res :body json/read-value)))
       (is (= {"ex-new"  "http://example.com/"
               "f"       "https://ns.flur.ee/ledger#"
@@ -95,7 +98,8 @@
               "id"      "@id"
               "rdf"     "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema"  "http://schema.org/"
-              "type"    "@type"}
+              "type"    "@type"
+              "graph"   "@graph"}
              (-> default-context3-res :body json/read-value))))))
 
 (deftest ^:integration update-default-context-test
@@ -107,9 +111,9 @@
           default-context-res  (api-get :defaultContext default-context-req)
           default-context-0    (-> default-context-res :body json/read-value)
           update-req           {:body    (json/write-value-as-string
-                                           {"@context"       {"f" "https://ns.flur.ee/ledger#" }
-                                            "@id" ledger-name
-                                            "@graph"    [{:ex/name "Foo"}]
+                                           {"@context" {"f" "https://ns.flur.ee/ledger#"}
+                                            "@id"      ledger-name
+                                            "@graph"   [{:ex/name "Foo"}]
                                             "f:defaultContext"
                                             (-> default-context-0
                                                 (assoc "foo-new"
@@ -117,7 +121,8 @@
                                                 (dissoc "foo"))})
                                 :headers json-headers}
           update-res           (api-post :transact update-req)
-          _                    (assert (= 200 (:status update-res)) (str "result was " update-res))
+          _                    (assert (= 200 (:status update-res))
+                                       (str "result was " update-res))
           default-context-res' (api-get :defaultContext default-context-req)
           default-context-1    (-> default-context-res' :body json/read-value)]
       (is (= 200 (:status update-res)))
@@ -127,5 +132,6 @@
               "id"      "@id"
               "rdf"     "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema"  "http://schema.org/"
-              "type"    "@type"}
+              "type"    "@type"
+              "graph"   "@graph"}
              default-context-1)))))
