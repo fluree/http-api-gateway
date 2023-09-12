@@ -9,10 +9,11 @@
    [fluree.db.util.log :as log]
    [fluree.http-api.handlers.ledger :as ledger]
    [malli.core :as m]
+   [malli.transform :as mt]
    [muuntaja.core :as muuntaja]
    [muuntaja.format.core :as mf]
    [muuntaja.format.json :as mfj]
-   [reitit.coercion.malli]
+   [reitit.coercion.malli :as rcm]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
@@ -41,12 +42,7 @@
   (m/schema ::fql/context {:registry fql/registry}))
 
 (def CreateRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:txn Transaction]
-              [:defaultContext {:optional true} Context]]]))
+  (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
 
 (def TValue
   (m/schema pos-int?))
@@ -174,17 +170,17 @@
     (let [verified (async/<!! (cred/verify body-params))
 
           {:keys [subject did]}
-          (cond (:subject verified)     ; valid credential
+          (cond (:subject verified) ; valid credential
                 verified
 
-                (nil? verified)         ; no credential
+                (nil? verified) ; no credential
                 {:subject body-params}
 
-                :else                   ; invalid credential
+                :else ; invalid credential
                 (throw (ex-info "Invalid credential"
                                 {:response {:status 400
-                                            :body {:error "Invalid credential"}}})))
-          req* (assoc req :body-params subject :credential/did did)]
+                                            :body   {:error "Invalid credential"}}})))
+          req*     (assoc req :body-params subject :credential/did did)]
       (handler req*))))
 
 (defn wrap-set-fuel-header
@@ -200,7 +196,7 @@
 
 (def json-format
   (mf/map->Format
-   {:name "application/json"
+   {:name    "application/json"
     :matches #"^application/(.+\+)?json$" ; match application/ld+json too
     :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
     :encoder [mfj/encoder]}))
@@ -284,68 +280,68 @@
                                    [400 coercion/coerce-request-middleware]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight
-                                    (concat default-fluree-middleware
-                                            middleware))]
+                                   (concat default-fluree-middleware
+                                           middleware))]
     (ring/ring-handler
-      (ring/router
-        [["/swagger.json"
-          {:get {:no-doc  true
-                 :swagger {:info {:title "Fluree HTTP API"}}
-                 :handler (swagger/create-swagger-handler)}}]
-         ["/fluree" {:middleware fluree-middleware}
-          ["/create"
-           {:post {:summary    "Endpoint for creating new ledgers"
-                   :parameters {:body CreateRequestBody}
-                   :responses  {201 {:body CreateResponseBody}
-                                400 {:body ErrorResponse}
-                                500 {:body ErrorResponse}}
-                   :handler    #'ledger/create}}]
-          ["/transact"
-           {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body TransactRequestBody}
-                   :responses  {200 {:body TransactResponseBody}
-                                400 {:body ErrorResponse}
-                                500 {:body ErrorResponse}}
-                   :handler    #'ledger/transact}}]
-          ["/query"
-           {:get  query-endpoint
-            :post query-endpoint}]
-          ["/history"
-           {:get  history-endpoint
-            :post history-endpoint}]
-          ["/defaultContext"
-           {:get  {:summary    "Endpoint for retrieving default contexts"
-                   :parameters {:body DefaultContextRequestBody}
-                   :responses  {200 {:body DefaultContextResponseBody}
-                                400 {:body ErrorResponse}
-                                500 {:body ErrorResponse}}
-                   :handler    #'ledger/default-context}}]]]
-        {:data {:coercion   (reitit.coercion.malli/create
-                             {:strip-extra-keys false})
-                :muuntaja   (muuntaja/create
-                             (-> muuntaja/default-options
-                                 (assoc-in
-                                  [:formats "application/json"]
-                                  json-format)
-                                 (assoc-in
-                                  [:formats "application/sparql-query"]
-                                  sparql-format)))
-                :middleware [swagger/swagger-feature
-                             muuntaja-mw/format-negotiate-middleware
-                             muuntaja-mw/format-response-middleware
-                             muuntaja-mw/format-request-middleware]}})
-      (ring/routes
-       (ring/ring-handler
-        (ring/router
-         (concat
-          [["/ws" {:get (fn [req]
-                          (if (http/ws-upgrade-request? req)
-                            (http/ws-upgrade-response websocket-handler)
-                            {:status 400
-                             :body   "Invalid websocket upgrade request"}))}]
-           routes])))
-       (swagger-ui/create-swagger-ui-handler
-        {:path   "/"
-         :config {:validatorUrl     nil
-                  :operationsSorter "alpha"}})
-       (ring/create-default-handler)))))
+     (ring/router
+       [["/swagger.json"
+         {:get {:no-doc  true
+                :swagger {:info {:title "Fluree HTTP API"}}
+                :handler (swagger/create-swagger-handler)}}]
+        ["/fluree" {:middleware fluree-middleware}
+         ["/create"
+          {:post {:summary    "Endpoint for creating new ledgers"
+                  :parameters {:body CreateRequestBody}
+                  :responses  {201 {:body CreateResponseBody}
+                               400 {:body ErrorResponse}
+                               500 {:body ErrorResponse}}
+                  :handler    #'ledger/create}}]
+         ["/transact"
+          {:post {:summary    "Endpoint for submitting transactions"
+                  :parameters {:body TransactRequestBody}
+                  :responses  {200 {:body TransactResponseBody}
+                               400 {:body ErrorResponse}
+                               500 {:body ErrorResponse}}
+                  :handler    #'ledger/transact}}]
+         ["/query"
+          {:get  query-endpoint
+           :post query-endpoint}]
+         ["/history"
+          {:get  history-endpoint
+           :post history-endpoint}]
+         ["/defaultContext"
+          {:get  {:summary    "Endpoint for retrieving default contexts"
+                  :parameters {:body DefaultContextRequestBody}
+                  :responses  {200 {:body DefaultContextResponseBody}
+                               400 {:body ErrorResponse}
+                               500 {:body ErrorResponse}}
+                  :handler    #'ledger/default-context}}]]]
+       {:data {:coercion   (rcm/create
+                            {:strip-extra-keys false})
+               :muuntaja   (muuntaja/create
+                            (-> muuntaja/default-options
+                                (assoc-in
+                                 [:formats "application/json"]
+                                 json-format)
+                                (assoc-in
+                                 [:formats "application/sparql-query"]
+                                 sparql-format)))
+               :middleware [swagger/swagger-feature
+                            muuntaja-mw/format-negotiate-middleware
+                            muuntaja-mw/format-response-middleware
+                            muuntaja-mw/format-request-middleware]}})
+     (ring/routes
+      (ring/ring-handler
+       (ring/router
+        (concat
+         [["/ws" {:get (fn [req]
+                         (if (http/ws-upgrade-request? req)
+                           (http/ws-upgrade-response websocket-handler)
+                           {:status 400
+                            :body   "Invalid websocket upgrade request"}))}]
+          routes])))
+      (swagger-ui/create-swagger-ui-handler
+       {:path   "/"
+        :config {:validatorUrl     nil
+                 :operationsSorter "alpha"}})
+      (ring/create-default-handler)))))
