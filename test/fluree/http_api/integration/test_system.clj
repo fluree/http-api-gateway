@@ -61,7 +61,7 @@
 (defn create-rand-ledger
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
-        req         (pr-str {:id               ledger-name
+        req         (pr-str {:f/ledger         ledger-name
                              :f/defaultContext ["" {:foo "http://foobar.com/"}]
                              :graph            [{:id       :foo/create-test
                                                  :type     :foo/test

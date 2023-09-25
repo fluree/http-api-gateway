@@ -11,7 +11,7 @@
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                       {"@id"      ledger-name
+                       {"f:ledger" ledger-name
                         "@context" ["" {"foo" "http://foobar.com/"}]
                         "@graph"   [{"id"      "ex:create-test"
                                      "type"    "foo:test"
@@ -24,11 +24,11 @@
              (-> res :body json/read-value)))))
   (testing "responds with 409 error if ledger already exists"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
-          req         (pr-str {:id      ledger-name
-                               :context ["" {:foo "http://foobar.com/"}]
-                               :graph   [{:id      :ex/create-test
-                                          :type    :foo/test
-                                          :ex/name "create-endpoint-test"}]})
+          req         (pr-str {:f/ledger ledger-name
+                               :context  ["" {:foo "http://foobar.com/"}]
+                               :graph    [{:id      :ex/create-test
+                                           :type    :foo/test
+                                           :ex/name "create-endpoint-test"}]})
           res-success (api-post :create {:body req :headers edn-headers})
           _           (assert (= 201 (:status res-success)))
           res-fail    (api-post :create {:body req :headers edn-headers})]
@@ -38,11 +38,11 @@
     (testing "can create a new ledger w/ EDN"
       (let [ledger-name (str "create-endpoint-" (random-uuid))
             address     (str "fluree:memory://" ledger-name "/main/head")
-            req         (pr-str {:id      ledger-name
-                                 :context ["" {:foo "http://foobar.com/"}]
-                                 :graph   [{:id      :ex/create-test
-                                            :type    :foo/test
-                                            :ex/name "create-endpoint-test"}]})
+            req         (pr-str {:f/ledger ledger-name
+                                 :context  ["" {:foo "http://foobar.com/"}]
+                                 :graph    [{:id      :ex/create-test
+                                             :type    :foo/test
+                                             :ex/name "create-endpoint-test"}]})
             res         (api-post :create {:body req :headers edn-headers})]
         (is (= 201 (:status res)))
         (is (= {:address address
@@ -51,11 +51,11 @@
                (-> res :body edn/read-string)))))
     (testing "responds with 409 error if ledger already exists"
       (let [ledger-name (str "create-endpoint-" (random-uuid))
-            req         (pr-str {:id      ledger-name
-                                 :context ["" {:foo "http://foobar.com/"}]
-                                 :graph   [{:id      :ex/create-test
-                                            :type    :foo/test
-                                            :ex/name "create-endpoint-test"}]})
+            req         (pr-str {:f/ledger ledger-name
+                                 :context  ["" {:foo "http://foobar.com/"}]
+                                 :graph    [{:id      :ex/create-test
+                                             :type    :foo/test
+                                             :ex/name "create-endpoint-test"}]})
             res-success (api-post :create {:body req :headers edn-headers})
             _           (assert (= 201 (:status res-success)))
             res-fail    (api-post :create {:body req :headers edn-headers})]
@@ -66,10 +66,10 @@
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {"@id"    ledger-name
-                         "@graph" {"id"      "ex:transaction-test"
-                                   "type"    "schema:Test"
-                                   "ex:name" "transact-endpoint-json-test"}})
+                        {"f:ledger" ledger-name
+                         "@graph"   {"id"      "ex:transaction-test"
+                                     "type"    "schema:Test"
+                                     "ex:name" "transact-endpoint-json-test"}})
           res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"address" address, "alias" ledger-name, "t" 2}
@@ -78,7 +78,7 @@
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {"@id"      ledger-name
+                        {"f:ledger" ledger-name
                          "@context" {"foo" "http://foo.com"}
                          "@graph"   {"id"      "ex:transaction-test"
                                      "type"    "schema:Test"
@@ -92,7 +92,7 @@
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
-                        {"@id"      ledger-name
+                        {"f:ledger" ledger-name
                          "@context" {"foo" "http://foo.com"}
                          "@graph"   [{"id"      "ex:transaction-test"
                                       "type"    "schema:Test"
@@ -112,12 +112,10 @@
       (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
             address     (str "fluree:memory://" ledger-name "/main/head")
             req         (pr-str
-                          {:context {:id "@id"
-                                     :graph "@graph"}
-                           :id      ledger-name
-                           :graph   [{:id      :ex/transaction-test
-                                      :type    :schema/Test
-                                      :ex/name "transact-endpoint-edn-test"}]})
+                          {:f/ledger ledger-name
+                           :graph    [{:id      :ex/transaction-test
+                                       :type    :schema/Test
+                                       :ex/name "transact-endpoint-edn-test"}]})
             res         (api-post :transact {:body req :headers edn-headers})]
         (is (= 200 (:status res)))
         (is (= {:address address, :alias ledger-name, :t 2}

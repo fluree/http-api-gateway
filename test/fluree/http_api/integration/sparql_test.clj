@@ -10,10 +10,10 @@
     (let [ledger-name (create-rand-ledger "query-sparql-test")
           txn-req     {:body
                        (json/write-value-as-string
-                        {"@id"    ledger-name
-                         "@graph" [{"id"      "ex:query-sparql-test"
-                                    "type"    "schema:Test"
-                                    "ex:name" "query-sparql-test"}]})
+                        {"f:ledger" ledger-name
+                         "@graph"   [{"id"      "ex:query-sparql-test"
+                                      "type"    "schema:Test"
+                                      "ex:name" "query-sparql-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))

@@ -23,18 +23,18 @@
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
                          (json/write-value-as-string
-                          {"@id"    ledger-name
-                           "@graph" [{"id"      "ex:query-test"
-                                      "type"    "schema:Test"
-                                      "ex:name" "query-test"}]})
+                          {"f:ledger" ledger-name
+                           "@graph"   [{"id"      "ex:query-test"
+                                        "type"    "schema:Test"
+                                        "ex:name" "query-test"}]})
                          :headers json-headers}
           txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (json/write-value-as-string
-                           {"@id" ledger-name
-                            "@graph"    [{"id"           "ex:query-test"
-                                          "ex:test-type" "integration"}]})
+                           {"f:ledger" ledger-name
+                            "@graph"   [{"id"           "ex:query-test"
+                                         "ex:test-type" "integration"}]})
                          :headers json-headers}
           txn2-res      (api-post :transact txn2-req)
           _             (assert (= 200 (:status txn2-res)))
@@ -80,18 +80,18 @@
     (let [ledger-name   "history-query-edn-test"
           txn-req       {:body
                          (pr-str
-                          {:id    ledger-name
-                           :graph [{:id      :ex/query-test
-                                    :type    :schema/Test
-                                    :ex/name "query-test"}]})
+                          {:f/ledger ledger-name
+                           :graph    [{:id      :ex/query-test
+                                       :type    :schema/Test
+                                       :ex/name "query-test"}]})
                          :headers edn-headers}
           txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (pr-str
-                           {:context {:id "@id"
-                                      :graph "@graph"}
-                            :id ledger-name
+                           {:context  {:id "@id"
+                                       :graph "@graph"}
+                            :f/ledger ledger-name
                             :graph    [{:id           :ex/query-test
                                         :ex/test-type "integration"}]})
                          :headers edn-headers}

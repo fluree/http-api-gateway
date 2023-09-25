@@ -25,7 +25,7 @@
   (let [ledger-name "credential-test"]
     (testing "create"
       ;; cannot transact without roles already defined
-      (let [create-req  {"@id"      ledger-name
+      (let [create-req  {"f:ledger" ledger-name
                          "@context" default-context
                          "@graph"   [{"id"      (:id test-utils/auth)
                                       "f:role"  {"id" "role:root"}
@@ -45,11 +45,11 @@
                (-> create-res :body json/read-value)))))
     (testing "transact"
       (let [txn-req (async/<!! (cred/generate
-                                 {"@id" ledger-name
-                                  "@graph"    [{"id"      "ex:cred-test"
-                                                "type"    "schema:Test"
-                                                "ex:name" "cred test"
-                                                "ex:foo"  1}]}
+                                 {"f:ledger" ledger-name
+                                  "@graph"   [{"id"      "ex:cred-test"
+                                               "type"    "schema:Test"
+                                               "ex:name" "cred test"
+                                               "ex:foo"  1}]}
                                  (:private test-utils/auth)))
             txn-res (test-utils/api-post :transact {:body (json/write-value-as-string txn-req)
                                                     :headers  test-utils/json-headers})]
@@ -92,16 +92,15 @@
 
     (testing "invalid credential"
       (let [invalid-tx  (-> (async/<!! (cred/generate
-                                         {"@context" {"ledger" "http://flur.ee/ns/ledger"
-                                                      "txn" "http://flur.ee/ns/txn"}
-                                          "ledger" "credential-test"
-                                          "txn"    {"@id" "ex:cred-test"
-                                                    "ex:KEY" "VALUE"}}
+                                         {"f:ledger" "credential-test"
+                                          "@graph"   {"@id" "ex:cred-test"
+                                                      "ex:KEY" "VALUE"}}
                                          (:private test-utils/auth)))
-                            (assoc-in ["credentialSubject" "txn" "ex:KEY"] "ALTEREDVALUE"))
-
-            invalid-res (test-utils/api-post :transact {:body (json/write-value-as-string invalid-tx)
-                                                        :headers  test-utils/json-headers})]
+                            (assoc-in ["credentialSubject" "@graph" "ex:KEY"]
+                                      "ALTEREDVALUE"))
+            invalid-res (test-utils/api-post
+                         :transact {:body (json/write-value-as-string invalid-tx)
+                                    :headers  test-utils/json-headers})]
         (is (= 400 (:status invalid-res)))
         (is (= {"error" "Invalid credential"}
                (-> invalid-res :body json/read-value)))))))
