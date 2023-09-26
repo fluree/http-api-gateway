@@ -12,30 +12,34 @@
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (json/write-value-as-string
-                          {"@id" ledger-name
-                           "@graph"    [{"id"        "ex:alice"
-                                         "type"      "ex:User"
-                                         "ex:secret" "alice's secret"}
-                                        {"id"        "ex:bob"
-                                         "type"      "ex:User"
-                                         "ex:secret" "bob's secret"}
-                                        {"id"            "ex:UserPolicy"
-                                         "type"          ["f:Policy"]
-                                         "f:targetClass" {"id" "ex:User"}
-                                         "f:allow"
-                                         [{"id"           "ex:globalViewAllow"
-                                           "f:targetRole" {"id" "ex:userRole"}
-                                           "f:action"     [{"id" "f:view"}]}]
-                                         "f:property"
-                                         [{"f:path" {"id" "ex:secret"}
-                                           "f:allow"
-                                           [{"id"           "ex:secretsRule"
-                                             "f:targetRole" {"id" "ex:userRole"}
-                                             "f:action"     [{"id" "f:view"} {"id" "f:modify"}]
-                                             "f:equals"     {"@list" [{"id" "f:$identity"} {"id" "ex:User"}]}}]}]}
-                                        {"id"      alice-did
-                                         "ex:User" {"id" "ex:alice"}
-                                         "f:role"  {"id" "ex:userRole"}}]})
+                          {"f:ledger" ledger-name
+                           "@graph"
+                           [{"id"        "ex:alice"
+                             "type"      "ex:User"
+                             "ex:secret" "alice's secret"}
+                            {"id"        "ex:bob"
+                             "type"      "ex:User"
+                             "ex:secret" "bob's secret"}
+                            {"id"            "ex:UserPolicy"
+                             "type"          ["f:Policy"]
+                             "f:targetClass" {"id" "ex:User"}
+                             "f:allow"
+                             [{"id"           "ex:globalViewAllow"
+                               "f:targetRole" {"id" "ex:userRole"}
+                               "f:action"     [{"id" "f:view"}]}]
+                             "f:property"
+                             [{"f:path" {"id" "ex:secret"}
+                               "f:allow"
+                               [{"id"           "ex:secretsRule"
+                                 "f:targetRole" {"id" "ex:userRole"}
+                                 "f:action"     [{"id" "f:view"}
+                                                 {"id" "f:modify"}]
+                                 "f:equals"     {"@list"
+                                                 [{"id" "f:$identity"}
+                                                  {"id" "ex:User"}]}}]}]}
+                            {"id"      alice-did
+                             "ex:User" {"id" "ex:alice"}
+                             "f:role"  {"id" "ex:userRole"}}]})
                         :headers json-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)) (str "response was" txn-res))
@@ -60,10 +64,10 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (json/write-value-as-string
-                         {"@context" {"f" "https://ns.flur.ee/ledger#" }
-                          "@id" ledger-name
-                          "@graph" [{"id"        "ex:alice"
-                                     "ex:secret" "alice's NEW secret"}]
+                         {"@context" {"f" "https://ns.flur.ee/ledger#"}
+                          "f:ledger" ledger-name
+                          "@graph"   [{"id"        "ex:alice"
+                                       "ex:secret" "alice's NEW secret"}]
                           "f:opts"   {"role" "ex:userRole"
                                       "did"  alice-did}})
                        :headers json-headers}
@@ -85,10 +89,10 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                         {"@context" {"f" "https://ns.flur.ee/ledger#" }
-                          "@id" ledger-name
-                          "@graph"    [{"id"        "ex:bob"
-                                        "ex:secret" "bob's new secret"}]
+                         {"@context" {"f" "https://ns.flur.ee/ledger#"}
+                          "f:ledger" ledger-name
+                          "@graph"   [{"id"        "ex:bob"
+                                       "ex:secret" "bob's new secret"}]
                           "f:opts"   {"role" "ex:userRole"
                                       "did"  alice-did}})
                        :headers json-headers}
@@ -118,32 +122,34 @@
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (pr-str
-                          {:context {:id "@id"
-                                     :graph "@graph"}
-                           :id ledger-name
-                           :graph    [{:id        :ex/alice,
-                                       :type      :ex/User,
-                                       :ex/secret "alice's secret"}
-                                      {:id        :ex/bob,
-                                       :type      :ex/User,
-                                       :ex/secret "bob's secret"}
-                                      {:id            :ex/UserPolicy,
-                                       :type          [:f/Policy],
-                                       :f/targetClass :ex/User
-                                       :f/allow       [{:id           :ex/globalViewAllow
-                                                        :f/targetRole :ex/userRole
-                                                        :f/action     [:f/view]}]
-                                       :f/property    [{:f/path  :ex/secret
-                                                        :f/allow [{:id           :ex/secretsRule
-                                                                   :f/targetRole :ex/userRole
-                                                                   :f/action     [:f/view :f/modify]
-                                                                   :f/equals     {:list [:f/$identity :ex/User]}}]}]}
-                                      {:id      alice-did
-                                       :ex/User :ex/alice
-                                       :f/role  :ex/userRole}]})
+                          {:f/ledger ledger-name
+                           :graph
+                           [{:id        :ex/alice,
+                             :type      :ex/User,
+                             :ex/secret "alice's secret"}
+                            {:id        :ex/bob,
+                             :type      :ex/User,
+                             :ex/secret "bob's secret"}
+                            {:id            :ex/UserPolicy,
+                             :type          [:f/Policy],
+                             :f/targetClass :ex/User
+                             :f/allow       [{:id           :ex/globalViewAllow
+                                              :f/targetRole :ex/userRole
+                                              :f/action     [:f/view]}]
+                             :f/property    [{:f/path  :ex/secret
+                                              :f/allow
+                                              [{:id           :ex/secretsRule
+                                                :f/targetRole :ex/userRole
+                                                :f/action     [:f/view :f/modify]
+                                                :f/equals
+                                                {:list [:f/$identity :ex/User]}}]}]}
+                            {:id      alice-did
+                             :ex/User :ex/alice
+                             :f/role  :ex/userRole}]})
                         :headers edn-headers}
           txn-res      (api-post :transact txn-req)
-          _            (assert (= 200 (:status txn-res)))
+          _            (assert (= 200 (:status txn-res))
+                               (str "Transaction response was: " (pr-str txn-res)))
           secret-query {:from    ledger-name
                         :select '{?s [:*]}
                         :where  '[[?s :rdf/type :ex/User]]}
@@ -166,10 +172,10 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (pr-str
-                         {:context {:id    "@id"
-                                    :graph "@graph"
-                                    :f     "https://ns.flur.ee/ledger#"}
-                          :id ledger-name
+                         {:context  {:id    "@id"
+                                     :graph "@graph"
+                                     :f     "https://ns.flur.ee/ledger#"}
+                          :f/ledger ledger-name
                           :graph    [{:id        :ex/alice
                                       :ex/secret "alice's NEW secret"}]
                           :f/opts   {:role :ex/userRole
@@ -193,14 +199,14 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (pr-str
-                         {:context {:id    "@id"
-                                    :graph "@graph"
-                                    :f     "https://ns.flur.ee/ledger#"}
-                          :id      ledger-name
-                          :graph   [{:id        :ex/bob
-                                     :ex/secret "bob's NEW secret"}]
-                          :f/opts    {:role :ex/userRole
-                                      :did  alice-did}})
+                         {:context  {:id    "@id"
+                                     :graph "@graph"
+                                     :f     "https://ns.flur.ee/ledger#"}
+                          :f/ledger ledger-name
+                          :graph    [{:id        :ex/bob
+                                      :ex/secret "bob's NEW secret"}]
+                          :f/opts   {:role :ex/userRole
+                                     :did  alice-did}})
                        :headers edn-headers}
               txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))

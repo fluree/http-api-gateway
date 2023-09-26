@@ -40,22 +40,21 @@
                                    (dissoc "foo"))
           txn0-req             {:body
                                 (json/write-value-as-string
-                                  {"@context"       {"f" "https://ns.flur.ee/ledger#"}
-                                   "@id"            ledger-name
-                                   "@graph"         [{"id"      "ex:nobody"
-                                                      "ex:name" "Nobody"}]
-                                   "f:defaultContext" default-context1})
+                                 {"@context"         {"f" "https://ns.flur.ee/ledger#"}
+                                  "f:ledger"         ledger-name
+                                  "@graph"           [{"id"      "ex:nobody"
+                                                       "ex:name" "Nobody"}]
+                                  "f:defaultContext" default-context1})
                                 :headers json-headers}
           txn0-res             (api-post :transact txn0-req)
           _                    (assert (= 200 (:status txn0-res)) (str "result was " txn0-res))
           txn1-req             {:body
                                 (json/write-value-as-string
-                                  {"@context" {"f" "https://ns.flur.ee/ledger#"}
-
-                                   "@id"              ledger-name
-                                   "@graph"           [{"id"      "ex:somebody"
-                                                        "ex:name" "Somebody"}]
-                                   "f:defaultContext" default-context2})
+                                 {"@context"         {"f" "https://ns.flur.ee/ledger#"}
+                                  "f:ledger"         ledger-name
+                                  "@graph"           [{"id"      "ex:somebody"
+                                                       "ex:name" "Somebody"}]
+                                  "f:defaultContext" default-context2})
                                 :headers json-headers}
           txn1-res             (api-post :transact txn1-req)
           _                    (assert (= 200 (:status txn1-res)))
@@ -111,14 +110,14 @@
           default-context-res  (api-get :defaultContext default-context-req)
           default-context-0    (-> default-context-res :body json/read-value)
           update-req           {:body    (json/write-value-as-string
-                                           {"@context" {"f" "https://ns.flur.ee/ledger#"}
-                                            "@id"      ledger-name
-                                            "@graph"   [{:ex/name "Foo"}]
-                                            "f:defaultContext"
-                                            (-> default-context-0
-                                                (assoc "foo-new"
-                                                       (get default-context-0 "foo"))
-                                                (dissoc "foo"))})
+                                          {"@context" {"f" "https://ns.flur.ee/ledger#"}
+                                           "f:ledger" ledger-name
+                                           "@graph"   [{:ex/name "Foo"}]
+                                           "f:defaultContext"
+                                           (-> default-context-0
+                                               (assoc "foo-new"
+                                                      (get default-context-0 "foo"))
+                                               (dissoc "foo"))})
                                 :headers json-headers}
           update-res           (api-post :transact update-req)
           _                    (assert (= 200 (:status update-res))

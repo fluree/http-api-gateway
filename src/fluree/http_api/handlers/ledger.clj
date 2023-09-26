@@ -78,8 +78,10 @@
 (defhandler transact
   [{:keys [fluree/conn content-type credential/did]
     {:keys [body]} :parameters}]
+  (log/trace "transact handler req body:" body)
   (let [opts (cond-> (opts->context-type {} content-type)
                did (assoc :did did))
+        _    (log/trace "transact handler opts:" opts)
         db   (-> conn
                  (fluree/transact! body opts)
                  deref!)]

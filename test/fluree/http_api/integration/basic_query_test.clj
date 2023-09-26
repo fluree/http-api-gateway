@@ -11,10 +11,10 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"@id"    ledger-name
-                          "@graph" [{"id"      "ex:query-test"
-                                     "type"    "schema:Test"
-                                     "ex:name" "query-test"}]})
+                         {"f:ledger" ledger-name
+                          "@graph"   [{"id"      "ex:query-test"
+                                       "type"    "schema:Test"
+                                       "ex:name" "query-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -35,13 +35,13 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-union-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
-                          "@graph"    [{"id"      "ex:query-test"
-                                        "type"    "schema:Test"
-                                        "ex:name" "query-test"}
-                                       {"id"       "ex:wes"
-                                        "type"     "schema:Person"
-                                        "ex:fname" "Wes"}]})
+                         {"f:ledger" ledger-name
+                          "@graph"   [{"id"      "ex:query-test"
+                                       "type"    "schema:Test"
+                                       "ex:name" "query-test"}
+                                      {"id"       "ex:wes"
+                                       "type"     "schema:Person"
+                                       "ex:fname" "Wes"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -62,22 +62,22 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-optional-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
-                          "@graph"    [{"id"          "ex:brian",
-                                        "type"        "ex:User",
-                                        "schema:name" "Brian"
-                                        "ex:friend"   [{"id" "ex:alice"}]}
-                                       {"id"           "ex:alice",
-                                        "type"         "ex:User",
-                                        "ex:favColor"  "Green"
-                                        "schema:email" "alice@flur.ee"
-                                        "schema:name"  "Alice"}
-                                       {"id"           "ex:cam",
-                                        "type"         "ex:User",
-                                        "schema:name"  "Cam"
-                                        "schema:email" "cam@flur.ee"
-                                        "ex:friend"    [{"id" "ex:brian"}
-                                                        {"id" "ex:alice"}]}]})
+                         {"f:ledger" ledger-name
+                          "@graph"   [{"id"          "ex:brian",
+                                       "type"        "ex:User",
+                                       "schema:name" "Brian"
+                                       "ex:friend"   [{"id" "ex:alice"}]}
+                                      {"id"           "ex:alice",
+                                       "type"         "ex:User",
+                                       "ex:favColor"  "Green"
+                                       "schema:email" "alice@flur.ee"
+                                       "schema:name"  "Alice"}
+                                      {"id"           "ex:cam",
+                                       "type"         "ex:User",
+                                       "schema:name"  "Cam"
+                                       "schema:email" "cam@flur.ee"
+                                       "ex:friend"    [{"id" "ex:brian"}
+                                                       {"id" "ex:alice"}]}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -102,10 +102,10 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-selectOne-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"@id" ledger-name
-                          "@graph"    [{"id"      "ex:query-test"
-                                        "type"    "schema:Test"
-                                        "ex:name" "query-test"}]})
+                         {"f:ledger" ledger-name
+                          "@graph"   [{"id"      "ex:query-test"
+                                       "type"    "schema:Test"
+                                       "ex:name" "query-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -127,7 +127,7 @@
           txn-req     {:headers json-headers
                        :body
                        (json/write-value-as-string
-                         {"@id" ledger-name
+                         {"f:ledger" ledger-name
                           "f:defaultContext"
                           {"id"     "@id"
                            "type"   "@type"
@@ -197,9 +197,7 @@
   (testing "can query a basic entity w/ EDN"
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
-                       (pr-str {:context {:id "@id"
-                                          :graph "@graph"}
-                                :id ledger-name
+                       (pr-str {:f/ledger ledger-name
                                 :graph    [{:id      :ex/query-test
                                             :type    :schema/Test
                                             :ex/name "query-test"}]})
