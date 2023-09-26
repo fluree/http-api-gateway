@@ -18,4 +18,5 @@
                                          #profile {:dev
                                                    {:id   "@id"
                                                     :type "@type"
-                                                    :ex   "http://example.com/"}}]}}}
+                                                    :ex   "http://example.com/"}}]}}
+ :fluree/txn-queue  {:length 10}}

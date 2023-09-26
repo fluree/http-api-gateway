@@ -40,7 +40,8 @@
                               :ex     "http://example.com/"
                               :schema "http://schema.org/"
                               :rdf    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                              :f      "https://ns.flur.ee/ledger#"}}}}}))
+                              :f      "https://ns.flur.ee/ledger#"}}}
+                           :fluree/txn-queue {:length 1}}}))
 
 (defn run-test-server
   [run-tests]

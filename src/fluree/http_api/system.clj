@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [fluree.http-api.components.http :as http]
             [fluree.http-api.components.fluree :as fluree]
+            [fluree.http-api.components.txn-queue :as txn-queue]
             [fluree.db.util.log :as log])
   (:gen-class))
 
@@ -14,20 +15,26 @@
 (def base-system
   {::ds/defs
    {:env
-    {:http/server {}}
+    {:http/server       {}
+     :fluree/connection {}
+     :fluree/txn-queue  {}}
     :fluree
-    {:conn fluree/conn}
+    {:conn      fluree/conn
+     :txn-queue txn-queue/processor}
     :http
     {:server  http/server
-     :handler #::ds{:start  (fn [{{:keys [:fluree/connection] :as cfg
+     :handler #::ds{:start  (fn [{{:keys [:fluree/connection :fluree/txn-queue]
+                                   :as cfg
                                    {:keys [routes middleware]} :http}
                                   ::ds/config}]
                               (log/debug "ds/config:" cfg)
-                              (http/app {:fluree/conn     connection
-                                         :http/routes     routes
-                                         :http/middleware middleware}))
+                              (http/app {:fluree/conn      connection
+                                         :fluree/txn-queue txn-queue
+                                         :http/routes      routes
+                                         :http/middleware  middleware}))
                     :config {:http              (ds/ref [:env :http/server])
-                             :fluree/connection (ds/ref [:fluree :conn])}}}}})
+                             :fluree/connection (ds/ref [:fluree :conn])
+                             :fluree/txn-queue  (ds/ref [:fluree :txn-queue])}}}}})
 
 (defmethod ds/named-system :base
   [_]
