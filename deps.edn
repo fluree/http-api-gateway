@@ -34,6 +34,10 @@
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {}}
 
+  :eastwood
+  {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}
+   :main-opts  ["-m" "eastwood.lint" {}]}
+
   :run-dev
   {:exec-fn   fluree.http-api.system/run-server
    :exec-args {:profile :dev}}}}
