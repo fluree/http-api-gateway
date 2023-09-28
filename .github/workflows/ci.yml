@@ -37,7 +37,7 @@ jobs:
           target: builder
           load: true
       - name: Run tests
-        run: docker run fluree/http-api-gateway clojure -X:test
+        run: docker run fluree/http-api-gateway make ci
 
   notifications:
     name: send notifications
