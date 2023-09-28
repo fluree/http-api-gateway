@@ -23,5 +23,6 @@
   [_]
   (ds/system :dev))
 
-(when-not dsrs/system
-  (dsr/start))
+(comment ; eval this in the REPL to start the system
+ (when-not dsrs/system
+   (start)))
