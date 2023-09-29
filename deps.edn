@@ -17,7 +17,7 @@
 
  :aliases
  {:dev
-  {:extra-paths ["dev/src" "test"]
+  {:extra-paths ["dev/src"]
    :extra-deps  {com.nextjournal/beholder    {:mvn/version "1.0.2"}
                  org.clojure/tools.namespace {:mvn/version "1.4.4"}
                  ring/ring-mock              {:mvn/version "0.4.0"}}}
@@ -33,6 +33,10 @@
                  clj-http/clj-http   {:mvn/version "3.12.3"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {}}
+
+  :eastwood
+  {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}
+   :main-opts  ["-m" "eastwood.lint" {}]}
 
   :run-dev
   {:exec-fn   fluree.http-api.system/run-server
