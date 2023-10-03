@@ -17,6 +17,10 @@ eastwood:
 .PHONY: ci
 ci: test eastwood
 
+.PHONY: test-verbose
+test-verbose:
+	clojure -X:test-verbose
+
 .PHONY: clean
 clean:
 	rm -rf target
