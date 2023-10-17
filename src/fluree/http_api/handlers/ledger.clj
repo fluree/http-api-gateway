@@ -1,10 +1,12 @@
 (ns fluree.http-api.handlers.ledger
   (:require
+   [clojure.core.async :refer [<!!]]
    [clojure.string :as str]
    [fluree.db.json-ld.api :as fluree]
    [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
-   [fluree.http-api.components.http :as-alias http])
+   [fluree.http-api.components.http :as-alias http]
+   [fluree.http-api.components.txn-queue :as txn-queue])
   (:import (clojure.lang ExceptionInfo)))
 
 (defn deref!
@@ -47,7 +49,7 @@
 
 (defn query-body->opts
   [query content-type]
-  (let [opts (:opts query)
+  (let [opts          (:opts query)
         content-type* (header->content-type content-type)]
     (assoc opts :context-type (content-type->context-type content-type*))))
 
@@ -59,32 +61,37 @@
 (defn ledger-summary
   [db]
   (assoc (-> db :ledger (select-keys [:alias :address]))
-         :t (-> db :commit :data :t)))
+    :t (-> db :commit :data :t)))
 
 (defhandler create
-  [{:keys [fluree/conn content-type credential/did]
+  [txn-queue
+   {:keys          [content-type credential/did]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [opts (cond-> (opts->context-type {} content-type)
                did (assoc :did did))
         _    (log/trace "create opts:" opts)
-        db   (-> conn
-                 (fluree/create-with-txn body opts)
-                 deref!)]
-    (log/debug "create-with-txn result:" db)
+        db   (<!! (txn-queue/submit txn-queue #::txn-queue{:txn-type :create
+                                                           :txn      body
+                                                           :opts     opts}))]
+    (log/trace "create-with-txn result:" db)
+    (when (util/exception? db) (throw db))
     {:status 201
      :body   (ledger-summary db)}))
 
 (defhandler transact
-  [{:keys [fluree/conn content-type credential/did]
+  [txn-queue
+   {:keys          [content-type credential/did]
     {:keys [body]} :parameters}]
   (log/trace "transact handler req body:" body)
   (let [opts (cond-> (opts->context-type {} content-type)
                did (assoc :did did))
         _    (log/trace "transact handler opts:" opts)
-        db   (-> conn
-                 (fluree/transact! body opts)
-                 deref!)]
+        db   (<!! (txn-queue/submit txn-queue #::txn-queue{:txn-type :txn
+                                                           :txn      body
+                                                           :opts     opts}))]
+    (log/trace "transact result:" db)
+    (when (util/exception? db) (throw db))
     {:status 200
      :body   (ledger-summary db)}))
 
@@ -105,8 +112,8 @@
   [{:keys [fluree/conn content-type credential/did] {{ledger :from :as query} :body} :parameters}]
   (log/debug "history handler got query:" query)
   (let [ledger* (->> ledger (fluree/load conn) deref!)
-        opts (cond-> (query-body->opts query content-type)
-               did (assoc :did did))
+        opts    (cond-> (query-body->opts query content-type)
+                  did (assoc :did did))
         query*  (-> query
                     (dissoc :from)
                     (assoc :opts opts))]
@@ -114,7 +121,7 @@
     (let [results (deref! (fluree/history ledger* query*))]
       (log/debug "history - query results:" results)
       {:status 200
-       :body results})))
+       :body   results})))
 
 (defhandler default-context
   [{:keys [fluree/conn] {{:keys [ledger t] :as body} :body} :parameters}]
@@ -123,6 +130,6 @@
         results (if t
                   (-> ledger* (fluree/default-context-at-t t) deref)
                   (-> ledger* fluree/db fluree/default-context))]
-      (log/debug "default-context for ledger" (str ledger ":") results)
-      {:status 200
-       :body   results}))
+    (log/debug "default-context for ledger" (str ledger ":") results)
+    {:status 200
+     :body   results}))

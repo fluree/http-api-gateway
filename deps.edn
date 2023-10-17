@@ -38,6 +38,13 @@
   {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}
    :main-opts  ["-m" "eastwood.lint" {}]}
 
+  :test-verbose
+  {:extra-paths ["test"]
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.86.1355"}
+                 clj-http/clj-http   {:mvn/version "3.12.3"}}
+   :exec-fn     kaocha.runner/exec-fn
+   :exec-args   {:kaocha.plugin.capture-output/capture-output? false}}
+
   :run-dev
   {:exec-fn   fluree.http-api.system/run-server
    :exec-args {:profile :dev}}}}

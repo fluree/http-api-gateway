@@ -254,7 +254,7 @@
          resp)))))
 
 (defn app
-  [{:keys [:fluree/conn :http/middleware :http/routes]}]
+  [{:keys [:fluree/conn :fluree/txn-queue :http/middleware :http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [exception-middleware      (exception/create-exception-middleware
@@ -281,7 +281,9 @@
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight
                                    (concat default-fluree-middleware
-                                           middleware))]
+                                           middleware))
+        create-handler            (partial #'ledger/create txn-queue)
+        transact-handler          (partial #'ledger/transact txn-queue)]
     (ring/ring-handler
      (ring/router
        [["/swagger.json"
@@ -295,14 +297,14 @@
                   :responses  {201 {:body CreateResponseBody}
                                400 {:body ErrorResponse}
                                500 {:body ErrorResponse}}
-                  :handler    #'ledger/create}}]
+                  :handler    create-handler}}]
          ["/transact"
           {:post {:summary    "Endpoint for submitting transactions"
                   :parameters {:body TransactRequestBody}
                   :responses  {200 {:body TransactResponseBody}
                                400 {:body ErrorResponse}
                                500 {:body ErrorResponse}}
-                  :handler    #'ledger/transact}}]
+                  :handler    transact-handler}}]
          ["/query"
           {:get  query-endpoint
            :post query-endpoint}]
@@ -310,12 +312,12 @@
           {:get  history-endpoint
            :post history-endpoint}]
          ["/defaultContext"
-          {:get  {:summary    "Endpoint for retrieving default contexts"
-                  :parameters {:body DefaultContextRequestBody}
-                  :responses  {200 {:body DefaultContextResponseBody}
-                               400 {:body ErrorResponse}
-                               500 {:body ErrorResponse}}
-                  :handler    #'ledger/default-context}}]]]
+          {:get {:summary    "Endpoint for retrieving default contexts"
+                 :parameters {:body DefaultContextRequestBody}
+                 :responses  {200 {:body DefaultContextResponseBody}
+                              400 {:body ErrorResponse}
+                              500 {:body ErrorResponse}}
+                 :handler    #'ledger/default-context}}]]]
        {:data {:coercion   (rcm/create
                             {:strip-extra-keys false})
                :muuntaja   (muuntaja/create
