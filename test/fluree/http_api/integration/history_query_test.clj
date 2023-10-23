@@ -89,8 +89,7 @@
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (pr-str
-                           {:context  {:id "@id"
-                                       :graph "@graph"}
+                           {:context  ["" {:id "@id", :graph "@graph"}]
                             :f/ledger ledger-name
                             :graph    [{:id           :ex/query-test
                                         :ex/test-type "integration"}]})

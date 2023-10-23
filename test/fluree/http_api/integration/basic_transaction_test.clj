@@ -16,22 +16,25 @@
                         "@graph"   [{"id"      "ex:create-test"
                                      "type"    "foo:test"
                                      "ex:name" "create-endpoint-test"}]})
+          _           (println "REQUEST:" (pr-str req))
           res         (api-post :create {:body req :headers json-headers})]
-      (is (= 201 (:status res)))
+      (is (= 201 (:status res))
+          (str "response was:" (pr-str res)))
       (is (= {"address" address
               "alias"   ledger-name
               "t"       1}
              (-> res :body json/read-value)))))
   (testing "responds with 409 error if ledger already exists"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
-          req         (pr-str {:f/ledger ledger-name
-                               :context  ["" {:foo "http://foobar.com/"}]
-                               :graph    [{:id      :ex/create-test
-                                           :type    :foo/test
-                                           :ex/name "create-endpoint-test"}]})
-          res-success (api-post :create {:body req :headers edn-headers})
+          req         (json/write-value-as-string
+                       {"f:ledger" ledger-name
+                        "@context" {"f" "https://ns.flur.ee/ledger#"} #_["" {"foo" "http://foobar.com/"}]
+                        "@graph"   [{"id"      "ex:create-test"
+                                     "type"    "foo:test"
+                                     "ex:name" "create-endpoint-test"}]})
+          res-success (api-post :create {:body req :headers json-headers})
           _           (assert (= 201 (:status res-success)))
-          res-fail    (api-post :create {:body req :headers edn-headers})]
+          res-fail    (api-post :create {:body req :headers json-headers})]
       (is (= 409 (:status res-fail))))))
 
 (deftest ^:integration ^:edn create-endpoint-edn-test
@@ -79,7 +82,7 @@
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
                         {"f:ledger" ledger-name
-                         "@context" {"foo" "http://foo.com"}
+                         "@context" ["" {"foo" "http://foo.com"}]
                          "@graph"   {"id"      "ex:transaction-test"
                                      "type"    "schema:Test"
                                      "foo:bar" "Baz"
@@ -93,7 +96,7 @@
           address     (str "fluree:memory://" ledger-name "/main/head")
           req         (json/write-value-as-string
                         {"f:ledger" ledger-name
-                         "@context" {"foo" "http://foo.com"}
+                         "@context" ["" {"foo" "http://foo.com"}]
                          "@graph"   [{"id"      "ex:transaction-test"
                                       "type"    "schema:Test"
                                       "foo:bar" "Baz"
