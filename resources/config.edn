@@ -15,6 +15,7 @@
                                                   :docker "data"}]
                      :defaults     {:context
                                     #or [#env FLUREE_DEFAULT_CONTEXT
+                                         #include-json-or-edn #env FLUREE_DEFAULT_CONTEXT_FILE
                                          #profile {:dev
                                                    {:id   "@id"
                                                     :type "@type"
