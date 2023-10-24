@@ -1,0 +1,7 @@
+{:rules
+ {:indentation
+  {:list-indent 1}
+  :whitespace
+  {:remove-surrounding? true
+   :remove-trailing?    true
+   :insert-missing?     true}}}

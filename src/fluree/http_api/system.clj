@@ -1,12 +1,30 @@
 (ns fluree.http-api.system
-  (:require [donut.system :as ds]
-            [aero.core :as aero]
+  (:require [aero.core :as aero]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [fluree.http-api.components.http :as http]
+            [clojure.string :as str]
+            [donut.system :as ds]
+            [fluree.db.util.log :as log]
             [fluree.http-api.components.fluree :as fluree]
+            [fluree.http-api.components.http :as http]
             [fluree.http-api.components.txn-queue :as txn-queue]
-            [fluree.db.util.log :as log])
-  (:gen-class))
+            [jsonista.core :as json])
+  (:gen-class)
+  (:import (java.io PushbackReader)))
+
+(defmethod aero/reader 'include-json-or-edn
+  [_opts _tag value]
+  (when value
+    (cond
+      (str/ends-with? value ".edn")
+      (with-open [r (io/reader value)]
+        (log/debug "Reading EDN file at" value)
+        (-> r (PushbackReader.) edn/read))
+
+      (str/ends-with? value ".json")
+      (with-open [r (io/reader value)]
+        (log/debug "Reading JSON file at" value)
+        (json/read-value r)))))
 
 (defn env-config [& [profile]]
   (aero/read-config (io/resource "config.edn")
