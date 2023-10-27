@@ -14,7 +14,7 @@
                                          :git/sha "5211aca498ff7b022c36de4ca713990f5e731a9c" }
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "b3392d5fa9e1e0fff3da435f29f20b168bbfcaf7"}}
+                                         :git/sha "310e71e0175302660f8312f1410173e2b63c66a3"}}
 
  :aliases
  {:dev
